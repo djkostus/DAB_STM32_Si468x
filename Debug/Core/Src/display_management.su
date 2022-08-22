@@ -1,0 +1,2 @@
+../Core/Src/display_management.c:15:6:DisplayMainScreen	16	static
+../Core/Src/display_management.c:60:6:DisplayTest	16	static

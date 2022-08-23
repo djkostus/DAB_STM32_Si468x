@@ -52,10 +52,10 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(DAB_INTB_GPIO_Port, DAB_INTB_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(DAB_GPIO_INTB_GPIO_Port, DAB_GPIO_INTB_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, DAB_CS_Pin|DAB_RESET_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, DAB_GPIO_CS_Pin|DAB_GPIO_RESET_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, LCD_CS_Pin|LCD_RST_Pin|LCD_DC_Pin|LED_GREEN_Pin
@@ -65,14 +65,14 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOB, TOUCH_CLK_Pin|TOUCH_DIN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PtPin */
-  GPIO_InitStruct.Pin = DAB_INTB_Pin;
+  GPIO_InitStruct.Pin = DAB_GPIO_INTB_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(DAB_INTB_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(DAB_GPIO_INTB_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PCPin PCPin */
-  GPIO_InitStruct.Pin = DAB_CS_Pin|DAB_RESET_Pin;
+  GPIO_InitStruct.Pin = DAB_GPIO_CS_Pin|DAB_GPIO_RESET_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

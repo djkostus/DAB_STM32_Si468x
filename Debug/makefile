@@ -34,34 +34,34 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := DAB_Radio
+BUILD_ARTIFACT_NAME := DAB_STM32_Si468x
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-DAB_Radio.elf \
+DAB_STM32_Si468x.elf \
 
 MAP_FILES += \
-DAB_Radio.map \
+DAB_STM32_Si468x.map \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-DAB_Radio.list \
+DAB_STM32_Si468x.list \
 
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: DAB_Radio.elf secondary-outputs
+main-build: DAB_STM32_Si468x.elf secondary-outputs
 
 # Tool invocations
-DAB_Radio.elf DAB_Radio.map: $(OBJS) $(USER_OBJS) D:\PROJEKTY_SOFT\DAB_Radio\STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "DAB_Radio.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\PROJEKTY_SOFT\DAB_Radio\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="DAB_Radio.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+DAB_STM32_Si468x.elf DAB_STM32_Si468x.map: $(OBJS) $(USER_OBJS) D:\PROJEKTY_SOFT\DAB_STM32_Si468x\STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "DAB_STM32_Si468x.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\PROJEKTY_SOFT\DAB_STM32_Si468x\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="DAB_STM32_Si468x.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -70,14 +70,14 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-DAB_Radio.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "DAB_Radio.list"
+DAB_STM32_Si468x.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "DAB_STM32_Si468x.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) DAB_Radio.elf DAB_Radio.list DAB_Radio.map default.size.stdout
+	-$(RM) DAB_STM32_Si468x.elf DAB_STM32_Si468x.list DAB_STM32_Si468x.map default.size.stdout
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)

@@ -57,18 +57,18 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define DAB_INTB_Pin GPIO_PIN_4
-#define DAB_INTB_GPIO_Port GPIOA
-#define DAB_SCK_Pin GPIO_PIN_5
-#define DAB_SCK_GPIO_Port GPIOA
-#define DAB_MISO_Pin GPIO_PIN_6
-#define DAB_MISO_GPIO_Port GPIOA
-#define DAB_MOSI_Pin GPIO_PIN_7
-#define DAB_MOSI_GPIO_Port GPIOA
-#define DAB_CS_Pin GPIO_PIN_4
-#define DAB_CS_GPIO_Port GPIOC
-#define DAB_RESET_Pin GPIO_PIN_5
-#define DAB_RESET_GPIO_Port GPIOC
+#define DAB_GPIO_INTB_Pin GPIO_PIN_4
+#define DAB_GPIO_INTB_GPIO_Port GPIOA
+#define DAB_GPIO_SCK_Pin GPIO_PIN_5
+#define DAB_GPIO_SCK_GPIO_Port GPIOA
+#define DAB_GPIO_MISO_Pin GPIO_PIN_6
+#define DAB_GPIO_MISO_GPIO_Port GPIOA
+#define DAB_GPIO_MOSI_Pin GPIO_PIN_7
+#define DAB_GPIO_MOSI_GPIO_Port GPIOA
+#define DAB_GPIO_CS_Pin GPIO_PIN_4
+#define DAB_GPIO_CS_GPIO_Port GPIOC
+#define DAB_GPIO_RESET_Pin GPIO_PIN_5
+#define DAB_GPIO_RESET_GPIO_Port GPIOC
 #define USER_BUTTON_Pin GPIO_PIN_0
 #define USER_BUTTON_GPIO_Port GPIOB
 #define PC_UART_TX_Pin GPIO_PIN_10

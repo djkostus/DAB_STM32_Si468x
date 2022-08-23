@@ -77,7 +77,7 @@
 #define SI468X_CMD_STOP_DIGITAL_SERVICE								0x82	//Stops an audio or data service.
 #define SI468X_CMD_GET_DIGITAL_SERVICE_DATA							0x84	//Gets a block of data associated with one of the enabled data components of a digital services.
 
-/TEST
+//TEST
 #define SI468X_CMD_TEST_GET_RSSI									0xE5	//Returns the reported RSSI in 8.8 format.
 
 

@@ -1,0 +1,2 @@
+../Core/Src/Si468x.c:16:6:Si468x_reset	8	static
+../Core/Src/Si468x.c:24:6:Si468x_power_up	4	static

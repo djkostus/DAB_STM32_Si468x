@@ -54,11 +54,10 @@ RETURN_CODE Si468x_read_reply(uint16_t length, uint8_t *buffer);
 uint8_t get_rx_buffer(int buffer_pos);
 
 void Si468x_get_sys_state();
-
 void Si468x_get_part_info();
 
-
-
+void Si468x_set_property(uint16_t property_id, uint16_t property_value);
+uint16_t Si468x_get_property(uint16_t property_id);
 
 
 #endif /* INC_SI468X_H_ */

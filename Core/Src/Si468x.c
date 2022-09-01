@@ -254,7 +254,8 @@ void Si468x_get_part_info()
 	dab_spi_tx_buffer[1]  = 0x00;						//Value as in documentation
 
 	status = Si468x_write_command(2, dab_spi_tx_buffer);
-	HAL_Delay(1);
+	HAL_Delay(10);
+	Si468x_write_single_byte(0x00);
 	status = Si468x_read_reply(10, dab_spi_rx_buffer);
 	DisplayStatusReg();
 
@@ -267,5 +268,32 @@ void Si468x_get_part_info()
 	DisplayStatusReg();
 }
 
+void Si468x_set_property(uint16_t property_id, uint16_t property_value)
+{
+	dab_spi_tx_buffer[0] = SI468X_CMD_SET_PROPERTY;
+	dab_spi_tx_buffer[1] = 0x00;
+	dab_spi_tx_buffer[2] = property_id & 0xFF;
+	dab_spi_tx_buffer[3] = property_id >> 8;
+	dab_spi_tx_buffer[4] = property_value & 0xFF;
+	dab_spi_tx_buffer[5] = property_value >> 8;
 
+	status = Si468x_write_command(6, dab_spi_tx_buffer);
+	HAL_Delay(1);
+	status = Si468x_read_reply(5, dab_spi_rx_buffer);
+	DisplayStatusReg();
+}
 
+uint16_t Si468x_get_property(uint16_t property_id)
+{
+	dab_spi_tx_buffer[0] = SI468X_CMD_GET_PROPERTY;
+	dab_spi_tx_buffer[1] = 0x01;
+	dab_spi_tx_buffer[2] = property_id & 0xFF;
+	dab_spi_tx_buffer[3] = property_id >> 8;
+
+	status = Si468x_write_command(4, dab_spi_tx_buffer);
+	HAL_Delay(1);
+	status = Si468x_read_reply(6, dab_spi_rx_buffer);
+	DisplayStatusReg();
+
+	return (dab_spi_rx_buffer[5] << 8) + dab_spi_rx_buffer[4];
+}

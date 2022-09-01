@@ -8,9 +8,9 @@
 #include "display_management.h"
 #include "ILI9341_Driver.h"
 #include "stdlib.h"
+#include "Si468x.h"
 
 char char_buffer[32];
-int test_cnt = 0;
 
 void DisplayMainScreen()
 {
@@ -21,9 +21,9 @@ void DisplayMainScreen()
     /*Nagłówek */
 	ILI9341_Draw_String(65,5,WHITE,BLACK,"DAB+ Radio Receiver",2); //Naglowek radia
 	ILI9341_Draw_Empty_Rectangle(YELLOW, 15, 35, 305, 60); //Nazwa radia
-	ILI9341_Draw_Empty_Rectangle(YELLOW, 15, 70, 105, 95); //Głośnośc
-	ILI9341_Draw_Empty_Rectangle(YELLOW, 115, 70, 185, 95); //Napis bufor
-	ILI9341_Draw_Empty_Rectangle(YELLOW, 185, 70, 305, 95); //Pasek bufora
+	//ILI9341_Draw_Empty_Rectangle(YELLOW, 15, 70, 105, 95); //Głośnośc
+	ILI9341_Draw_Empty_Rectangle(YELLOW, 15, 70, 305, 95); //Napis bufor
+	//ILI9341_Draw_Empty_Rectangle(YELLOW, 185, 70, 305, 95); //Pasek bufora
 
 
 	ILI9341_Draw_Empty_Rectangle(YELLOW, 15, 110, 105, 160); //volume-
@@ -49,17 +49,66 @@ void DisplayMainScreen()
 
 	ILI9341_Draw_Empty_Rectangle(YELLOW, 215, 170, 305, 220); //Next station
 	ILI9341_Draw_Filled_Rectangle(RED, 216, 171, 304, 219);
-	ILI9341_Draw_String(245,180,WHITE,RED,"NEXT",2);//Wyswietl stringa
-	ILI9341_Draw_String(232,195,WHITE,RED,"STATION",2);//Wyswietl stringa
+	ILI9341_Draw_String(245,180,WHITE,RED,"NEXT", 2);//Wyswietl stringa
+	ILI9341_Draw_String(232,195,WHITE,RED,"STATION", 2);//Wyswietl stringa
 
-	ILI9341_Draw_String(120, 75, WHITE, BLACK, "Buffer: " , 2);
+	ILI9341_Draw_String(20, 75, WHITE, BLACK, "Status:" , 2);
+	ILI9341_Draw_String(240, 75, WHITE, BLACK, "/", 2);
 
 	CS_OFF;
 }
 
-void DisplayTest()
+void DisplayStatusReg()
 {
-	test_cnt++;
-	//itoa(100, temp_char, 10);
-	ILI9341_Draw_String(20, 40, WHITE, BLACK, itoa(test_cnt, char_buffer, 10), 2);
+	ILI9341_Draw_String(20, 40, WHITE, BLACK, "   ", 2);
+	ILI9341_Draw_String(60, 40, WHITE, BLACK, "   ", 2);
+	ILI9341_Draw_String(100, 40, WHITE, BLACK, "   ", 2);
+	ILI9341_Draw_String(140, 40, WHITE, BLACK, "   ",  2);
+	ILI9341_Draw_String(180, 40, WHITE, BLACK, "   ", 2);
+	ILI9341_Draw_String(220, 40, WHITE, BLACK, "   ", 2);
+
+
+	ILI9341_Draw_String(20, 40, WHITE, BLACK, itoa(get_rx_buffer(0), char_buffer, 10), 2);
+	ILI9341_Draw_String(60, 40, WHITE, BLACK, itoa(get_rx_buffer(1), char_buffer, 10), 2);
+	ILI9341_Draw_String(100, 40, WHITE, BLACK, itoa(get_rx_buffer(2), char_buffer, 10), 2);
+	ILI9341_Draw_String(140, 40, WHITE, BLACK, itoa(get_rx_buffer(3), char_buffer, 10), 2);
+	ILI9341_Draw_String(180, 40, WHITE, BLACK, itoa(get_rx_buffer(4), char_buffer, 10), 2);
+}
+
+void DisplayOK()
+{
+	ILI9341_Draw_String(260, 40, WHITE, BLACK, "OK", 2);
+}
+
+void DisplayError()
+{
+	ILI9341_Draw_String(260, 40, WHITE, BLACK, "TO", 2);
+}
+
+void ClearOK()
+{
+	ILI9341_Draw_String(260, 40, WHITE, BLACK, "  ", 2);
+}
+
+void DisplayState(char* string)
+{
+	ILI9341_Draw_String(80, 75, WHITE, BLACK, string, 2);
+	ILI9341_Draw_String(190, 75, WHITE, BLACK, "      ", 2);
+	ILI9341_Draw_String(250, 75, WHITE, BLACK, "      ", 2);
+}
+
+
+void DisplayFirmwareDownloadStatus(uint32_t byte_cnt)
+{
+	ILI9341_Draw_String(190, 75, WHITE, BLACK, itoa(byte_cnt, char_buffer, 10), 2);
+}
+
+void DisplayFirmwareTotalSize(uint32_t byte_cnt)
+{
+	ILI9341_Draw_String(250, 75, WHITE, BLACK, itoa(byte_cnt, char_buffer, 10), 2);
+}
+
+void DisplayCmdError()
+{
+	ILI9341_Draw_String(290, 40, WHITE, BLACK, "E", 2);
 }

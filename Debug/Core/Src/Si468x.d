@@ -30,7 +30,9 @@ Core/Src/Si468x.o: ../Core/Src/Si468x.c ../Core/Inc/main.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
- ../Core/Inc/Si468x.h ../Core/Inc/Si468x_defs.h
+ ../Core/Inc/spi.h ../Core/Inc/main.h ../Core/Inc/i2c.h \
+ ../Core/Inc/Si468x.h ../Core/Inc/Si468x_defs.h ../Core/Inc/patch_mini.h \
+ ../Core/Inc/patch_full.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
 ../Core/Inc/stm32f4xx_hal_conf.h:
@@ -63,5 +65,10 @@ Core/Src/Si468x.o: ../Core/Src/Si468x.c ../Core/Inc/main.h \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:
+../Core/Inc/spi.h:
+../Core/Inc/main.h:
+../Core/Inc/i2c.h:
 ../Core/Inc/Si468x.h:
 ../Core/Inc/Si468x_defs.h:
+../Core/Inc/patch_mini.h:
+../Core/Inc/patch_full.h:

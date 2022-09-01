@@ -27,7 +27,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "si468x.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -102,11 +102,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   ILI9341_Init();
-
   DisplayMainScreen();
-  HAL_TIM_Base_Start_IT(&htim10);
-  HAL_TIM_Base_Start_IT(&htim11);
 
+  Si468x_init();
 
   /* USER CODE END 2 */
 

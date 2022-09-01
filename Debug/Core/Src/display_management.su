@@ -1,2 +1,9 @@
 ../Core/Src/display_management.c:15:6:DisplayMainScreen	16	static
-../Core/Src/display_management.c:60:6:DisplayTest	16	static
+../Core/Src/display_management.c:61:6:DisplayStatusReg	16	static
+../Core/Src/display_management.c:78:6:DisplayOK	16	static
+../Core/Src/display_management.c:83:6:DisplayError	16	static
+../Core/Src/display_management.c:88:6:ClearOK	16	static
+../Core/Src/display_management.c:93:6:DisplayState	24	static
+../Core/Src/display_management.c:101:6:DisplayFirmwareDownloadStatus	24	static
+../Core/Src/display_management.c:106:6:DisplayFirmwareTotalSize	24	static
+../Core/Src/display_management.c:111:6:DisplayCmdError	16	static

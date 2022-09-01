@@ -12,6 +12,20 @@
 
 void DisplayMainScreen();
 
-void DisplayTest();
+void DisplayStatusReg();
+
+void DisplayOK();
+void DisplayError();
+
+extern void ClearOK();
+
+void DisplayFirmwareDownloadStatus(uint32_t byte_cnt);
+void DisplayFirmwareTotalSize(uint32_t byte_cnt);
+
+void DisplayState(char* string);
+
+void DisplayCmdError();
+
+void DisplayBooting();
 
 #endif /* INC_DISPLAY_H_ */

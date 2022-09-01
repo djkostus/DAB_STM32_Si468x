@@ -71,6 +71,8 @@ void Error_Handler(void);
 #define DAB_GPIO_RESET_GPIO_Port GPIOC
 #define USER_BUTTON_Pin GPIO_PIN_0
 #define USER_BUTTON_GPIO_Port GPIOB
+#define TEST_OUT_Pin GPIO_PIN_14
+#define TEST_OUT_GPIO_Port GPIOE
 #define PC_UART_TX_Pin GPIO_PIN_10
 #define PC_UART_TX_GPIO_Port GPIOB
 #define PC_UART_RX_Pin GPIO_PIN_11
@@ -97,10 +99,10 @@ void Error_Handler(void);
 #define LED_BLUE_GPIO_Port GPIOD
 #define BACKLIGHT_PWM_OUT_Pin GPIO_PIN_8
 #define BACKLIGHT_PWM_OUT_GPIO_Port GPIOC
-#define DAB_SDA_Pin GPIO_PIN_9
-#define DAB_SDA_GPIO_Port GPIOC
-#define DAB_SCL_Pin GPIO_PIN_8
-#define DAB_SCL_GPIO_Port GPIOA
+#define DAB_GPIO_SDA_Pin GPIO_PIN_9
+#define DAB_GPIO_SDA_GPIO_Port GPIOC
+#define DAB_GPIO_SCL_Pin GPIO_PIN_8
+#define DAB_GPIO_SCL_GPIO_Port GPIOA
 #define TOUCH_IRQ_Pin GPIO_PIN_6
 #define TOUCH_IRQ_GPIO_Port GPIOD
 #define TOUCH_CS_Pin GPIO_PIN_7

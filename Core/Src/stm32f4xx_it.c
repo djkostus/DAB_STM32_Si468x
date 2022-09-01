@@ -44,7 +44,7 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 
-uint16_t systick_ticks = 0;
+
 
 /* USER CODE END PV */
 
@@ -59,6 +59,7 @@ uint16_t systick_ticks = 0;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern I2C_HandleTypeDef hi2c3;
 extern DMA_HandleTypeDef hdma_spi2_tx;
 extern SPI_HandleTypeDef hspi2;
 extern TIM_HandleTypeDef htim10;
@@ -191,19 +192,7 @@ void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
 
-	systick_ticks++;
 
-	if(systick_ticks % 500 == 0)
-	{
-//		Leds_Control_Blink();
-
-	}
-
-//	if(systick_ticks % 100 == 0)
-//	{
-//		DisplayTestCounter(systick_ticks);
-//
-//	}
 
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
@@ -275,19 +264,46 @@ void SPI2_IRQHandler(void)
   /* USER CODE END SPI2_IRQn 1 */
 }
 
+/**
+  * @brief This function handles I2C3 event interrupt.
+  */
+void I2C3_EV_IRQHandler(void)
+{
+  /* USER CODE BEGIN I2C3_EV_IRQn 0 */
+
+  /* USER CODE END I2C3_EV_IRQn 0 */
+  HAL_I2C_EV_IRQHandler(&hi2c3);
+  /* USER CODE BEGIN I2C3_EV_IRQn 1 */
+
+  /* USER CODE END I2C3_EV_IRQn 1 */
+}
+
+/**
+  * @brief This function handles I2C3 error interrupt.
+  */
+void I2C3_ER_IRQHandler(void)
+{
+  /* USER CODE BEGIN I2C3_ER_IRQn 0 */
+
+  /* USER CODE END I2C3_ER_IRQn 0 */
+  HAL_I2C_ER_IRQHandler(&hi2c3);
+  /* USER CODE BEGIN I2C3_ER_IRQn 1 */
+
+  /* USER CODE END I2C3_ER_IRQn 1 */
+}
+
 /* USER CODE BEGIN 1 */
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if (htim->Instance==TIM10)
 	{
-		DisplayTest();
+		//DisplayTest();
 	}
 
 	if(htim->Instance==TIM11)
 	{
 		Leds_Control_Blink();
-//		DisplayTestCounter(systick_ticks);
 
 	}
 }

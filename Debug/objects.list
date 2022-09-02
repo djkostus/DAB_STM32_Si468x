@@ -1,5 +1,6 @@
 "./Core/Src/ILI9341_Driver.o"
 "./Core/Src/Si468x.o"
+"./Core/Src/debug_uart.o"
 "./Core/Src/display_management.o"
 "./Core/Src/dma.o"
 "./Core/Src/gpio.o"

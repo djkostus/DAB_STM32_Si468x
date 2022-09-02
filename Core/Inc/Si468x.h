@@ -9,7 +9,7 @@
 #define INC_SI468X_H_
 
 #define SPI_TX_BUFFER_SIZE 4096
-#define SPI_RX_BUFFER_SIZE 64
+#define SPI_RX_BUFFER_SIZE 256
 
 #define RESET_PIN_HIGH HAL_GPIO_WritePin(DAB_GPIO_RESET_GPIO_Port, DAB_GPIO_RESET_Pin, 1)
 #define RESET_PIN_LOW HAL_GPIO_WritePin(DAB_GPIO_RESET_GPIO_Port, DAB_GPIO_RESET_Pin, 0)
@@ -27,6 +27,53 @@
 
 #define POLL_TIMEOUT_MS 1000
 
+#define IMAGE_DAB_6_0_9_START_ADDR 0x6000
+#define IMAGE_DAB_4_0_5_START_ADDR 0x106000
+#define IMAGE_FM_4_0_12_START_ADDR 0x86000
+
+//Default DAB Channels
+#define CH_5A 0   // 174928 kHz
+#define CH_5B 1   // 176640 kHz
+#define CH_5C 2   // 178352 kHz
+#define CH_5D 3   // 180064 kHz
+#define CH_6A 4   // 181936 kHz
+#define CH_6B 5   // 183648 kHz
+#define CH_6C 6   // 185360 kHz
+#define CH_6D 7   // 187072 kHz
+#define CH_7A 8   // 188928 kHz
+#define CH_7B 9   // 190640 kHz
+#define CH_7C 10   // 192352 kHz
+#define CH_7D 11   // 194064 kHz
+#define CH_8A 12   // 195936 kHz
+#define CH_8B 13   // 197648 kHz
+#define CH_8C 14   // 199360 kHz
+#define CH_8D 15   // 201072 kHz
+#define CH_9A 16   // 202928 kHz
+#define CH_9B 17   // 204640 kHz
+#define CH_9C 18   // 206352 kHz
+#define CH_9D 19   // 208064 kHz
+#define CH_10A 20   // 209936 kHz
+#define CH_undef_1 21   // 210096 kHz
+#define CH_10B 22   // 211648 kHz
+#define CH_10C 23   // 213360 kHz
+#define CH_10D 24   // 215072 kHz
+#define CH_11A 25   // 216928 kHz
+#define CH_undef_2 26   // 217088 kHz
+#define CH_11B 27   // 218640 kHz
+#define CH_11C 28   // 220352 kHz
+#define CH_11D 29   // 222064 kHz
+#define CH_12A 30   // 223936 kHz
+#define CH_undef_3 31   // 224096 kHz
+#define CH_12B 32   // 225648 kHz
+#define CH_12C 33   // 227360 kHz
+#define CH_12D 34   // 229072 kHz
+#define CH_13A 35   // 230784 kHz
+#define CH_13B 36   // 232496 kHz
+#define CH_13C 37   // 234208 kHz
+#define CH_13D 38   // 235776 kHz
+#define CH_13E 39   // 237488 kHz
+#define CH_13F 40   // 239200 kHz
+
 typedef uint8_t RETURN_CODE;
 
 
@@ -37,7 +84,7 @@ void Si468x_power_up();
 
 void Si468x_load_init();
 void Si468x_bootloader_load_host();
-void Si468x_firmware_load_flash();
+void Si468x_firmware_load_flash(uint32_t start_address);
 void Si468x_boot();
 
 void Si468x_write_single_byte(uint8_t byte_to_write);
@@ -58,6 +105,9 @@ void Si468x_get_part_info();
 
 void Si468x_set_property(uint16_t property_id, uint16_t property_value);
 uint16_t Si468x_get_property(uint16_t property_id);
+
+void Si468x_dab_get_freq_list();
+void Si468x_dab_tune_freq(uint8_t channel);
 
 
 #endif /* INC_SI468X_H_ */

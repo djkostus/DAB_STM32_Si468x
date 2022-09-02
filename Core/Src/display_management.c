@@ -112,3 +112,5 @@ void DisplayCmdError()
 {
 	ILI9341_Draw_String(290, 40, WHITE, BLACK, "E", 2);
 }
+
+

@@ -220,6 +220,8 @@
 //DAB EVENT (0xB3)
 #define SI468x_PROP_DAB_EVENT_INTERRUPT_SOURCE						0xB300	//Default: 0x0000. Configures which dab events will set the DEVENTINT status bit.
 #define SI468x_PROP_DAB_EVENT_MIN_SVRLIST_PERIOD					0xB301	//Default: 0x000A. Configures how often service list notifications can occur.
+#define SI468x_PROP_DAB_EVENT_MIN_SVRLIST_PERIOD_RECONFIG			0xB302	//Default: 0x000A. Configures how often service list notifications can occur during reconfiguration.
+
 #define SI468x_PROP_DAB_EVENT_MIN_FREQINFO_PERIOD					0xB303	//Default: 0x0005. Configures how often frequency information notifications can occur.
 #define SI468x_PROP_DAB_EVENT_AUDIO_DEMUTE							0xB304	//Default: 0x0014. Configures the audio demute interrupt delay.
 

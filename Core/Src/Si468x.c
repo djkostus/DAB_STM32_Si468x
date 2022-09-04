@@ -24,6 +24,13 @@ uint32_t freq_table[47];
 RETURN_CODE status = 0;
 char itoa_buffer[32];
 
+uint8_t rssi = 0;
+uint8_t snr = 0;
+uint16_t fib_error_count = 0;
+uint8_t valid = 0;
+uint8_t acq = 0;
+uint8_t acq_int = 0;
+
 
 void Si468x_init()
 {
@@ -45,9 +52,18 @@ void Si468x_init()
 	Si468x_set_property(SI468x_PROP_DAB_ACF_ENABLE, 0x01);	//tylko soft mute włączone przy slabym sygnale
 	Si468x_set_property(SI468x_PROP_DAB_ACF_MUTE_SIGLOSS_THRESHOLD, 0x05);	//próg wyciszania audio jak sygnal jest utracony, default 0x06
 	Si468x_set_property(SI468x_PROP_DAB_ACF_SOFTMUTE_BER_LIMITS, 0xE2C4); //limit BER kiedy soft mute zadziała. Defaultowo 0xE2A6
-	Si468x_dab_get_freq_list();
+	Si468x_dab_get_freq_list(); //odczytujemy z ukladu liste czestotliwosci do tablicy
 	Si468x_dab_tune_freq(CH_11B);
+	Si468x_get_sys_state(); //kontrolnie zeby sprawdzic czy demod dziala
+	Si468x_dab_digrad_status();
 
+	while(valid == 0 || acq == 0)
+	{
+		Si468x_dab_reset_interrupts();
+		Si468x_dab_digrad_status();
+		HAL_Delay(100);
+	}
+	Si468x_dab_start_digital_service(12966, 4);
 }
 
 void Si468x_reset()
@@ -444,14 +460,128 @@ void Si468x_dab_tune_freq(uint8_t channel)
 	dab_spi_tx_buffer[5] = 0x00;						//antcap [15:8]
 
 	status = Si468x_write_command(6, dab_spi_tx_buffer);
-//	HAL_Delay(200);
-	status = Si468x_read_reply(4, dab_spi_rx_buffer);
+	status = Si468x_read_reply(1, dab_spi_rx_buffer);
+	if(dab_spi_rx_buffer[0] & 0x40)
+	{
+		send_debug_msg("Command Error!", CRLF_SEND);
+	}
+
+	for(uint16_t i = 0; i < TUNE_TIMEOUT_MS; i++)
+	{
+		status = Si468x_read_reply(1, dab_spi_rx_buffer);
+
+		if(dab_spi_rx_buffer[0] & 0x01)
+		{
+			send_debug_msg("Tuned successfully. Time: ", CRLF_NO_SEND);
+			send_debug_msg(itoa(i ,itoa_buffer, 10), CRLF_NO_SEND);
+			send_debug_msg(" ms.", CRLF_SEND);
+			break;
+		}
+		if(i == TUNE_TIMEOUT_MS - 1)
+		{
+			send_debug_msg("Tune Timeout exceeded!", CRLF_SEND);
+		}
+		HAL_Delay(1);
+	}
+}
+
+void Si468x_dab_reset_interrupts()
+{
+	send_debug_msg("------------------Clear DAB Interrupts-------------------", CRLF_SEND);
+
+	dab_spi_tx_buffer[0] = SI468X_CMD_DAB_GET_EVENT_STATUS; 	//
+	dab_spi_tx_buffer[1] = 0x01;								//Event ACK - clear all DAB event interrupts
+	status = Si468x_write_command(2, dab_spi_tx_buffer);
+	status = Si468x_read_reply(1, dab_spi_rx_buffer);
 	if(dab_spi_rx_buffer[0] & 0x40)
 	{
 		send_debug_msg("Command Error!", CRLF_SEND);
 	}
 	else
 	{
-		send_debug_msg("Successfully tuned to selected frequency.", CRLF_SEND);
+		send_debug_msg("Clear OK.", CRLF_SEND);
 	}
+}
+
+void Si468x_dab_digrad_status()
+{
+	send_debug_msg("----------------Getting DAB Digrad Status----------------", CRLF_SEND);
+
+	dab_spi_tx_buffer[0] = SI468X_CMD_DAB_DIGRAD_STATUS; 	//
+	dab_spi_tx_buffer[1] = 0x00;
+	status = Si468x_write_command(2, dab_spi_tx_buffer);
+	HAL_Delay(1);
+	status = Si468x_read_reply(22, dab_spi_rx_buffer);
+	rssi = dab_spi_rx_buffer[6];
+	snr = dab_spi_rx_buffer[7];
+	fib_error_count = (dab_spi_rx_buffer[11] << 8) + dab_spi_rx_buffer[10];
+
+	if(dab_spi_rx_buffer[5] & 0x01)
+	{
+		valid = 1;
+	}
+	else
+	{
+		valid = 0;
+	}
+
+	if(dab_spi_rx_buffer[5] & 0x04)
+	{
+		acq = 1;
+	}
+	else
+	{
+		acq = 0;
+	}
+
+	if(dab_spi_rx_buffer[4] & 0x04)
+	{
+		acq_int = 1;
+	}
+	else
+	{
+		acq_int = 0;
+	}
+
+
+	DisplayDabStatus(rssi, snr, fib_error_count, valid, acq, acq_int);
+}
+
+void Si468x_dab_get_digital_service_list()
+{
+
+
+}
+
+void Si468x_dab_start_digital_service(uint32_t service_id, uint32_t component_id)
+{
+	send_debug_msg("----------------DAB Start Digital Service----------------", CRLF_SEND);
+
+	dab_spi_tx_buffer[0] = SI468X_CMD_START_DIGITAL_SERVICE; 	//Command Code Start Digital Service
+	dab_spi_tx_buffer[1] = 0x00;								//always 0 - as in documentation
+	dab_spi_tx_buffer[2] = 0x00;								//always 0 - as in documentation
+	dab_spi_tx_buffer[3] = 0x00;								//always 0 - as in documentation
+
+	dab_spi_tx_buffer[4]  = service_id & 0xFF;					//Service ID [7:0]
+	dab_spi_tx_buffer[5]  = service_id >> 8;					//Service ID [15:8]
+	dab_spi_tx_buffer[6]  = service_id >> 16;					//Service ID [23:16]
+	dab_spi_tx_buffer[7]  = service_id >> 24;					//Service ID [31:24]
+
+	dab_spi_tx_buffer[8]  = component_id & 0xFF;				//Service ID [7:0]
+	dab_spi_tx_buffer[9]  = component_id >> 8;					//Service ID [15:8]
+	dab_spi_tx_buffer[10]  = component_id >> 16;				//Service ID [23:16]
+	dab_spi_tx_buffer[11]  = component_id >> 24;				//Service ID [31:24]
+
+	status = Si468x_write_command(12, dab_spi_tx_buffer);
+	HAL_Delay(1);
+	status = Si468x_read_reply(5, dab_spi_rx_buffer);
+	if(dab_spi_rx_buffer[0] & 0x40)
+	{
+		send_debug_msg("Command Error!", CRLF_SEND);
+	}
+	else
+	{
+		send_debug_msg("Service started successfully!", CRLF_SEND);
+	}
+
 }

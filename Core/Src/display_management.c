@@ -52,9 +52,6 @@ void DisplayMainScreen()
 	ILI9341_Draw_String(245,180,WHITE,RED,"NEXT", 2);//Wyswietl stringa
 	ILI9341_Draw_String(232,195,WHITE,RED,"STATION", 2);//Wyswietl stringa
 
-	ILI9341_Draw_String(20, 75, WHITE, BLACK, "Status:" , 2);
-	ILI9341_Draw_String(240, 75, WHITE, BLACK, "/", 2);
-
 	CS_OFF;
 }
 
@@ -113,4 +110,21 @@ void DisplayCmdError()
 	ILI9341_Draw_String(290, 40, WHITE, BLACK, "E", 2);
 }
 
-
+void DisplayDabStatus(uint8_t rssi_val, uint8_t snr_val, uint16_t fib_er_val, uint8_t valid_val, uint8_t acq_val, uint8_t acq_int_val)
+{
+	ILI9341_Draw_String(20, 75, WHITE, BLACK, "RSSI:" , 2);
+	ILI9341_Draw_String(63, 75, WHITE, BLACK, "   ", 2);
+	ILI9341_Draw_String(63, 75, WHITE, BLACK, itoa(rssi_val, char_buffer, 10), 2);
+	ILI9341_Draw_String(90, 75, WHITE, BLACK, "SNR:" , 2);
+	ILI9341_Draw_String(123, 75, WHITE, BLACK, "   ", 2);
+	ILI9341_Draw_String(123, 75, WHITE, BLACK, itoa(snr_val, char_buffer, 10), 2);
+	ILI9341_Draw_String(160, 75, WHITE, BLACK, "FIB Er:", 2);
+	ILI9341_Draw_String(220, 75, WHITE, BLACK, "        ", 2);
+	ILI9341_Draw_String(220, 75, WHITE, BLACK, itoa(fib_er_val, char_buffer, 10), 2);
+	ILI9341_Draw_String(20, 40, WHITE, BLACK, "Valid:", 2);
+	ILI9341_Draw_String(73, 40, WHITE, BLACK, itoa(valid_val, char_buffer, 10), 2);
+	ILI9341_Draw_String(90, 40, WHITE, BLACK, "ACQ:", 2);
+	ILI9341_Draw_String(123, 40, WHITE, BLACK, itoa(acq_val, char_buffer, 10), 2);
+	ILI9341_Draw_String(150, 40, WHITE, BLACK, "ACQ INT:", 2);
+	ILI9341_Draw_String(220, 40, WHITE, BLACK, itoa(acq_int_val, char_buffer, 10), 2);
+}

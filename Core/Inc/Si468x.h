@@ -27,6 +27,8 @@
 
 #define POLL_TIMEOUT_MS 1000
 
+#define TUNE_TIMEOUT_MS 3000
+
 #define IMAGE_DAB_6_0_9_START_ADDR 0x6000
 #define IMAGE_DAB_4_0_5_START_ADDR 0x106000
 #define IMAGE_FM_4_0_12_START_ADDR 0x86000
@@ -108,6 +110,10 @@ uint16_t Si468x_get_property(uint16_t property_id);
 
 void Si468x_dab_get_freq_list();
 void Si468x_dab_tune_freq(uint8_t channel);
+void Si468x_dab_reset_interrupts();
+void Si468x_dab_digrad_status();
+void SI468x_dab_get_digital_service_list();
+void Si468x_dab_start_digital_service(uint32_t service_id, uint32_t component_id);
 
 
 #endif /* INC_SI468X_H_ */

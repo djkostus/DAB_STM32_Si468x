@@ -28,4 +28,6 @@ void DisplayCmdError();
 
 void DisplayBooting();
 
+void DisplayDabStatus(uint8_t rssi_val, uint8_t snr_val, uint16_t fib_er_val, uint8_t valid_val, uint8_t acq_val, uint8_t acq_int_val);
+
 #endif /* INC_DISPLAY_H_ */

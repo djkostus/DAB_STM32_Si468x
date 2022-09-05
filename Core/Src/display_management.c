@@ -110,21 +110,25 @@ void DisplayCmdError()
 	ILI9341_Draw_String(290, 40, WHITE, BLACK, "E", 2);
 }
 
-void DisplayDabStatus(uint8_t rssi_val, uint8_t snr_val, uint16_t fib_er_val, uint8_t valid_val, uint8_t acq_val, uint8_t acq_int_val)
+void DisplayDabStatus(uint8_t rssi_val, uint8_t snr_val, uint8_t valid_val, uint8_t acq_val, uint32_t fic_bit_val, uint32_t fic_err_val, uint8_t fic_quality_val)
 {
-	ILI9341_Draw_String(20, 75, WHITE, BLACK, "RSSI:" , 2);
-	ILI9341_Draw_String(63, 75, WHITE, BLACK, "   ", 2);
-	ILI9341_Draw_String(63, 75, WHITE, BLACK, itoa(rssi_val, char_buffer, 10), 2);
-	ILI9341_Draw_String(90, 75, WHITE, BLACK, "SNR:" , 2);
-	ILI9341_Draw_String(123, 75, WHITE, BLACK, "   ", 2);
-	ILI9341_Draw_String(123, 75, WHITE, BLACK, itoa(snr_val, char_buffer, 10), 2);
-	ILI9341_Draw_String(160, 75, WHITE, BLACK, "FIB Er:", 2);
-	ILI9341_Draw_String(220, 75, WHITE, BLACK, "        ", 2);
-	ILI9341_Draw_String(220, 75, WHITE, BLACK, itoa(fib_er_val, char_buffer, 10), 2);
 	ILI9341_Draw_String(20, 40, WHITE, BLACK, "Valid:", 2);
-	ILI9341_Draw_String(73, 40, WHITE, BLACK, itoa(valid_val, char_buffer, 10), 2);
-	ILI9341_Draw_String(90, 40, WHITE, BLACK, "ACQ:", 2);
-	ILI9341_Draw_String(123, 40, WHITE, BLACK, itoa(acq_val, char_buffer, 10), 2);
-	ILI9341_Draw_String(150, 40, WHITE, BLACK, "ACQ INT:", 2);
-	ILI9341_Draw_String(220, 40, WHITE, BLACK, itoa(acq_int_val, char_buffer, 10), 2);
+	ILI9341_Draw_String(69, 40, WHITE, BLACK, itoa(valid_val, char_buffer, 10), 2);
+	ILI9341_Draw_String(82, 40, WHITE, BLACK, "ACQ:", 2);
+	ILI9341_Draw_String(115, 40, WHITE, BLACK, itoa(acq_val, char_buffer, 10), 2);
+	ILI9341_Draw_String(131, 40, WHITE, BLACK, "RSSI:" , 2);
+	ILI9341_Draw_String(172, 40, WHITE, BLACK, "   ", 2);
+	ILI9341_Draw_String(172, 40, WHITE, BLACK, itoa(rssi_val, char_buffer, 10), 2);
+	ILI9341_Draw_String(192, 40, WHITE, BLACK, "SNR:" , 2);
+	ILI9341_Draw_String(225, 40, WHITE, BLACK, "   ", 2);
+	ILI9341_Draw_String(225, 40, WHITE, BLACK, itoa(snr_val, char_buffer, 10), 2);
+	ILI9341_Draw_String(240, 40, WHITE, BLACK, "FQ:" , 2);
+	ILI9341_Draw_String(272, 40, WHITE, BLACK, "   ", 2);
+	ILI9341_Draw_String(272, 40, WHITE, BLACK, itoa(fic_quality_val, char_buffer, 10), 2);
+	ILI9341_Draw_String(20, 75, WHITE, BLACK, "FIC Er:", 2);
+	ILI9341_Draw_String(80, 75, WHITE, BLACK, "          ", 2);
+	ILI9341_Draw_String(80, 75, WHITE, BLACK, itoa(fic_err_val, char_buffer, 10), 2);
+	ILI9341_Draw_String(150, 75, WHITE, BLACK, "FIC Tot:", 2);
+	ILI9341_Draw_String(220, 75, WHITE, BLACK, "          ", 2);
+	ILI9341_Draw_String(220, 75, WHITE, BLACK, itoa(fic_bit_val, char_buffer, 10), 2);
 }

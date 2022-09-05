@@ -304,6 +304,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if(htim->Instance==TIM11)
 	{
 		Leds_Control_Blink();
+//		Si468x_dab_reset_interrupts();
+//		Si468x_dab_digrad_status();
 
 	}
 }

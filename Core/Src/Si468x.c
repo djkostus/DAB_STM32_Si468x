@@ -37,6 +37,8 @@ uint32_t fic_err_cnt = 0;
 
 uint8_t started = 0;
 
+uint8_t name_temp[];
+
 
 void Si468x_init()
 {
@@ -49,9 +51,9 @@ void Si468x_init()
 	Si468x_get_part_info();
 	Si468x_get_sys_state();
 	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_CFG, 0x00); //włączanie lub wyłącznie switcha front-end, prawdopodobnie dla dab dać 0x00, dla FM 0x01
-	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARM, 0xF8A9); //dla DAB 0xF8A9 lub 0xF784, sprawdzic jak lepiej dziala. Dla FM 0xEDB5.
-	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARB, 0x01C6); //dla DAB 0x01C6 lub 0x01D8, sprawdzic jak lepiej dziala. Dla FM 0x01E3.
-	Si468x_set_property(SI468x_PROP_DAB_VALID_RSSI_THRESHOLD, 0x05); //prog RSSI od kiedy łapie kanał, default 12
+	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARM, 0xF889); //dla DAB 0xF8A9 lub 0xF784, sprawdzic jak lepiej dziala. Dla FM 0xEDB5.
+	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARB, 0x01E6); //dla DAB 0x01C6 lub 0x01D8, sprawdzic jak lepiej dziala. Dla FM 0x01E3.
+	Si468x_set_property(SI468x_PROP_DAB_VALID_RSSI_THRESHOLD, 0x12); //prog RSSI od kiedy łapie kanał, default 12
 	Si468x_set_property(SI468x_PROP_DAB_XPAD_ENABLE, 0x4005); //określa które featury PAD będą przesyłane do hosta
 	Si468x_set_property(SI468x_PROP_DAB_EVENT_MIN_SVRLIST_PERIOD, 0x06); //określa co ile będzie aktualizowana lista usług, x100 ms
 	Si468x_set_property(SI468x_PROP_DAB_EVENT_MIN_SVRLIST_PERIOD_RECONFIG, 0x06); //określa co ile będzie aktualizowana lista usług w trakcie rekonfiguracji, x100 ms
@@ -59,14 +61,16 @@ void Si468x_init()
 	Si468x_set_property(SI468x_PROP_DAB_ACF_MUTE_SIGLOSS_THRESHOLD, 0x05);	//próg wyciszania audio jak sygnal jest utracony, default 0x06
 	Si468x_set_property(SI468x_PROP_DAB_ACF_SOFTMUTE_BER_LIMITS, 0xE2C4); //limit BER kiedy soft mute zadziała. Defaultowo 0xE2A6
 	Si468x_dab_get_freq_list(); //odczytujemy z ukladu liste czestotliwosci do tablicy
-	Si468x_dab_tune_freq(CH_11B);
+	Si468x_dab_tune_freq/*(CH_9C);*/ (CH_11B);
 	Si468x_get_sys_state(); //kontrolnie zeby sprawdzic czy demod dziala
 
-	while(!valid && !acq)
+	while(!valid || !acq)
 	{
 		Si468x_dab_digrad_status();
 		HAL_Delay(200);
 	}
+//	HAL_Delay(500);
+	Si468x_dab_get_ensemble_info();
 	Si468x_dab_get_digital_service_list();
 
 //	Si468x_dab_start_digital_service(12966, 0);
@@ -572,8 +576,13 @@ void Si468x_dab_get_digital_service_list()
 {
 	send_debug_msg("--------------DAB Get Digital Service List---------------", CRLF_SEND);
 
+	//List management variables
 	uint16_t list_size = 0;
 	uint8_t number_of_services = 0;
+	uint8_t services_count = 0;
+	uint8_t components_count = 0;
+
+	//Service management variables
 	uint8_t pd_flag = 0;
 	uint32_t srv_ref = 0;
 	uint8_t country_id = 0;
@@ -581,20 +590,24 @@ void Si468x_dab_get_digital_service_list()
 	uint8_t number_of_components = 0;
 	uint32_t service_id = 0;
 
-	#define LIST_READ_OFFSET 4
+	//Component management variables
+	uint8_t tm_id = 0;
+	uint8_t sub_ch_id = 0;
+
+	#define LIST_READ_OFFSET 4 //Offset to make parsing easier, it comes from some padding data before list
 
 	dab_spi_tx_buffer[0] = SI468X_CMD_GET_DIGITAL_SERVICE_LIST; 	//Command Code Start Digital Service
 	dab_spi_tx_buffer[1] = 0x00;									//for DAB always 0 - as in documentation
 
 	status = Si468x_write_command(2, dab_spi_tx_buffer);
-	HAL_Delay(1);
-	status = Si468x_read_reply(2048, dab_spi_rx_buffer);
+	HAL_Delay(500);
+	status = Si468x_read_reply(400, dab_spi_rx_buffer);
 	if(dab_spi_rx_buffer[0] & 0x40)
 	{
 		send_debug_msg("Command Error!", CRLF_SEND);
 	}
 	list_size = dab_spi_rx_buffer[0 + LIST_READ_OFFSET] + (dab_spi_rx_buffer[1 + LIST_READ_OFFSET] << 8);
-	send_debug_msg("Service list size: ", CRLF_NO_SEND);
+	send_debug_msg("Services list size: ", CRLF_NO_SEND);
 	send_debug_msg(itoa(list_size, itoa_buffer, 10), CRLF_NO_SEND);
 	send_debug_msg(" bytes.", CRLF_SEND);
 
@@ -602,77 +615,80 @@ void Si468x_dab_get_digital_service_list()
 	send_debug_msg("Number of services: ", CRLF_NO_SEND);
 	send_debug_msg(itoa(number_of_services, itoa_buffer, 10), CRLF_SEND);
 
-	//---------test read service info---------------------------------------------------------------------------------------------------------------
-	pd_flag = dab_spi_rx_buffer[12 + LIST_READ_OFFSET] & 0x01;
-	send_debug_msg("PD Flag: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(pd_flag, itoa_buffer, 10), CRLF_SEND);
+	//only for debug purposes to see received values
+//	for(uint16_t i = 0; i < 400; i++)
+//	{
+//		send_debug_msg(itoa(dab_spi_rx_buffer[i + 12], itoa_buffer, 16), CRLF_SEND);
+//	}
 
-	p_ty = (dab_spi_rx_buffer[12 + LIST_READ_OFFSET] & 0x3E) >> 1;
-	send_debug_msg("Program Type: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(p_ty, itoa_buffer, 10), CRLF_SEND);
+	//-----read service info---------------------------------------------------------------------------------------------------------------
 
-	number_of_components = dab_spi_rx_buffer[13 + LIST_READ_OFFSET] & 0x0F;
-	send_debug_msg("Number of Components: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(number_of_components, itoa_buffer, 10), CRLF_SEND);
-
-	switch(p_ty)
+	for(uint8_t service_index = 0; service_index < number_of_services; service_index++)
 	{
-		case 0:
-			srv_ref = dab_spi_rx_buffer[8 + LIST_READ_OFFSET] + ((dab_spi_rx_buffer[9 + LIST_READ_OFFSET] & 0x0F) << 8);
-			country_id = (dab_spi_rx_buffer[9 + LIST_READ_OFFSET] & 0xF0) >> 4;
-			service_id = (country_id << 12) + srv_ref;
-			break;
+		send_debug_msg("Next service----------------------------------------------", CRLF_SEND);
 
-		case 1:
-			srv_ref = dab_spi_rx_buffer[8 + LIST_READ_OFFSET] + (dab_spi_rx_buffer[9 + LIST_READ_OFFSET] << 8) + ((dab_spi_rx_buffer[10 + LIST_READ_OFFSET] & 0x0F) << 16);
-			country_id = (dab_spi_rx_buffer[10 + LIST_READ_OFFSET] & 0xF0) >> 4;
-			service_id = (country_id << 20) + srv_ref;
-			break;
+		pd_flag = dab_spi_rx_buffer[12 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x01;
+		send_debug_msg("PD Flag: ", CRLF_NO_SEND);
+		send_debug_msg(itoa(pd_flag, itoa_buffer, 10), CRLF_SEND);
 
-		default:
-			break;
+		p_ty = (dab_spi_rx_buffer[12 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x3E) >> 1;
+		send_debug_msg("Program Type: ", CRLF_NO_SEND);
+		send_debug_msg(itoa(p_ty, itoa_buffer, 10), CRLF_SEND);
+
+		number_of_components = dab_spi_rx_buffer[13 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F;
+		send_debug_msg("Number of Components: ", CRLF_NO_SEND);
+		send_debug_msg(itoa(number_of_components, itoa_buffer, 10), CRLF_SEND);
+
+		switch(pd_flag)
+		{
+			case 0:
+				srv_ref = dab_spi_rx_buffer[8 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] + ((dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F) << 8);
+				country_id = (dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0xF0) >> 4;
+				service_id = (country_id << 12) + srv_ref;
+				break;
+
+			case 1:
+				srv_ref = dab_spi_rx_buffer[8 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] + (dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] << 8) + ((dab_spi_rx_buffer[10 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F) << 16);
+				country_id = (dab_spi_rx_buffer[10 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0xF0) >> 4;
+				service_id = (country_id << 20) + srv_ref;
+				break;
+
+			default:
+				break;
+		}
+		send_debug_msg("Service Ref: ", CRLF_NO_SEND);
+		send_debug_msg(itoa(srv_ref, itoa_buffer, 16), CRLF_SEND);
+		send_debug_msg("Country ID: ", CRLF_NO_SEND);
+		send_debug_msg(itoa(country_id, itoa_buffer, 16), CRLF_SEND);
+		send_debug_msg("Service ID: ", CRLF_NO_SEND);
+		send_debug_msg(itoa(service_id, itoa_buffer, 16), CRLF_SEND);
+
+		send_debug_msg("Service Name: ", CRLF_NO_SEND);
+
+		for(uint8_t name_index = 0; name_index <= 15; name_index++)
+		{
+			name_temp[name_index] = dab_spi_rx_buffer[16 + name_index + LIST_READ_OFFSET  + 24 * services_count + 4 * components_count];
+		}
+		send_debug_msg((char*)name_temp, CRLF_SEND);
+		send_debug_msg("End Of Service Name", CRLF_SEND);
+
+		//----read component info---------------------------------------------------------------------------------------------
+
+		for(uint8_t component_index = 0; component_index < number_of_components; component_index++)
+		{
+			send_debug_msg("Next component--------------------------------", CRLF_SEND);
+
+			tm_id = (dab_spi_rx_buffer[33  + 24 * services_count + 4 * components_count] & 0xC0) >> 14;
+			send_debug_msg("TM ID : ", CRLF_NO_SEND);
+			send_debug_msg(itoa(tm_id, itoa_buffer, 10), CRLF_SEND);
+
+			sub_ch_id = dab_spi_rx_buffer[32  + 24 * services_count + 4 * components_count] & 0x3F;
+			send_debug_msg("Subchannel ID : ", CRLF_NO_SEND);
+			send_debug_msg(itoa(sub_ch_id, itoa_buffer, 10), CRLF_SEND);
+			components_count++;
+		}
+		services_count++;
 	}
-	send_debug_msg("Service Ref: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(srv_ref, itoa_buffer, 16), CRLF_SEND);
-	send_debug_msg("Country ID: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(country_id, itoa_buffer, 16), CRLF_SEND);
-	send_debug_msg("Service ID: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(service_id, itoa_buffer, 16), CRLF_SEND);
-
-
-	send_debug_msg("Service Name: ", CRLF_SEND);
-
-	for(uint8_t i = 0; i <= 15; i++)
-	{
-		send_debug_msg(itoa(dab_spi_rx_buffer[16 + i + LIST_READ_OFFSET], itoa_buffer, 16), CRLF_SEND);
-	}
-
-	send_debug_msg("End Of Service Name", CRLF_SEND);
-
-//-------------------test read component info---------------------------------------------------------------------------------------------
-
-	uint8_t tm_id = 0;
-	uint8_t sub_ch_id = 0;
-
-	tm_id = (dab_spi_rx_buffer[33] & 0xC0) >> 14;
-	send_debug_msg("TM ID : ", CRLF_NO_SEND);
-	send_debug_msg(itoa(tm_id, itoa_buffer, 10), CRLF_SEND);
-
-	sub_ch_id = dab_spi_rx_buffer[32] & 0x3F;
-	send_debug_msg("Subchannel ID : ", CRLF_NO_SEND);
-	send_debug_msg(itoa(sub_ch_id, itoa_buffer, 10), CRLF_SEND);
-
-
-
-
-	for(uint8_t i = 0; i < number_of_services; i++)
-	{
-
-
-	}
-
-
-
 }
 
 void Si468x_dab_start_digital_service(uint32_t service_id, uint32_t component_id)
@@ -706,4 +722,39 @@ void Si468x_dab_start_digital_service(uint32_t service_id, uint32_t component_id
 		send_debug_msg("Service started successfully!", CRLF_SEND);
 	}
 
+}
+
+void Si468x_dab_get_ensemble_info()
+{
+	uint16_t ensemble_id = 0;
+	uint8_t ensemble_label[16];
+
+	send_debug_msg("------------------DAB Get Ensemble Info------------------", CRLF_SEND);
+
+	dab_spi_tx_buffer[0] = SI468X_CMD_DAB_GET_ENSEMBLE_INFO; 	//Command Code DAB Get Ensemble Info
+	dab_spi_tx_buffer[1] = 0x00;								//always 0 - as in documentation
+
+	status = Si468x_write_command(2, dab_spi_tx_buffer);
+	HAL_Delay(10);
+	status = Si468x_read_reply(20, dab_spi_rx_buffer);
+	if(dab_spi_rx_buffer[0] & 0x40)
+	{
+		send_debug_msg("Command Error!", CRLF_SEND);
+	}
+	else
+	{
+		ensemble_id = (dab_spi_rx_buffer[5] << 8) + dab_spi_rx_buffer[4];
+
+		//only for debug purposes
+//		for(uint8_t i = 0; i < 16; i++)
+//		{
+//			ensemble_label[i] = dab_spi_rx_buffer[6 + i];
+//			send_debug_msg(itoa(ensemble_label[i], itoa_buffer, 10), CRLF_SEND);
+//		}
+		send_debug_msg("Ensemble ID: ", CRLF_NO_SEND);
+		send_debug_msg(itoa(ensemble_id, itoa_buffer, 10), CRLF_SEND);
+
+		send_debug_msg("Label: ", CRLF_NO_SEND);
+		send_debug_msg((char*)ensemble_label, CRLF_SEND);
+	}
 }

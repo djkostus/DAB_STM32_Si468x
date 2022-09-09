@@ -9,6 +9,9 @@
 #define INC_DISPLAY_H_
 
 #include "main.h"
+#include "Si468x.h"
+#include "ILI9341_Driver.h"
+#include "stdlib.h"
 
 void DisplayMainScreen();
 
@@ -28,6 +31,6 @@ void DisplayCmdError();
 
 void DisplayBooting();
 
-void DisplayDabStatus(uint8_t rssi_val, uint8_t snr_val, uint8_t valid_val, uint8_t acq_val, uint32_t fic_bit_val, uint32_t fic_err_val, uint8_t fic_quality_val);
+void DisplayDabStatus(sig_metrics_t sig_metrics_val);
 
 #endif /* INC_DISPLAY_H_ */

@@ -91,6 +91,8 @@ typedef struct{
 	uint32_t srv_ref;
 	uint8_t country_id;
 	uint32_t service_id;
+	uint32_t freq;
+	uint8_t freq_id;
 	uint8_t number_of_components;
 	dab_component_t components[5];
 }dab_service_t;
@@ -151,7 +153,8 @@ void Si468x_dab_reset_interrupts();
 void Si468x_dab_digrad_status();
 void SI468x_dab_get_digital_service_list();
 void Si468x_dab_start_digital_service(uint32_t service_id, uint32_t component_id);
-void Si468x_dab_get_ensemble_info();
+uint8_t Si468x_dab_get_ensemble_info();
+void Si468x_dab_full_scan();
 
 
 #endif /* INC_SI468X_H_ */

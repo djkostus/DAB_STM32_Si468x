@@ -111,12 +111,18 @@ int main(void)
 
   Si468x_init();
 
-  /* USER CODE END 2 */
+    /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if(!HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin))
+	  {
+		  Si468x_play_next_station();
+	  }
+	  HAL_Delay(200);
+	  Si468x_dab_digrad_status();
 
     /* USER CODE END WHILE */
 

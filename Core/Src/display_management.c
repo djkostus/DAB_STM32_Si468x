@@ -127,10 +127,10 @@ void DisplayDabStatus(sig_metrics_t sig_metrics_val)
 //	ILI9341_Draw_String(100, 75, WHITE, BLACK, "          ", 2);
 //	ILI9341_Draw_String(100, 75, WHITE, BLACK, itoa(fib_error_val, char_buffer, 10), 2);
 	//póki co nie wiadomo jak włączyć pomiar pseudo BER
-//	ILI9341_Draw_String(20, 75, WHITE, BLACK, "FIC Er:", 2);
-//	ILI9341_Draw_String(80, 75, WHITE, BLACK, "          ", 2);
-//	ILI9341_Draw_String(80, 75, WHITE, BLACK, itoa(fic_err_val, char_buffer, 10), 2);
-//	ILI9341_Draw_String(150, 75, WHITE, BLACK, "FIC Tot:", 2);
-//	ILI9341_Draw_String(220, 75, WHITE, BLACK, "          ", 2);
-//	ILI9341_Draw_String(220, 75, WHITE, BLACK, itoa(fic_bit_val, char_buffer, 10), 2);
+	ILI9341_Draw_String(20, 75, WHITE, BLACK, "FIC Er:", 2);
+	ILI9341_Draw_String(80, 75, WHITE, BLACK, "          ", 2);
+	ILI9341_Draw_String(80, 75, WHITE, BLACK, itoa(sig_metrics_val.fic_err_cnt, char_buffer, 10), 2);
+	ILI9341_Draw_String(150, 75, WHITE, BLACK, "FIC Tot:", 2);
+	ILI9341_Draw_String(220, 75, WHITE, BLACK, "          ", 2);
+	ILI9341_Draw_String(220, 75, WHITE, BLACK, itoa(sig_metrics_val.fic_bit_cnt, char_buffer, 10), 2);
 }

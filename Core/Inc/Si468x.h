@@ -85,7 +85,7 @@ typedef struct{
 }dab_component_t;
 
 typedef struct{
-	uint8_t name[18];
+	uint8_t name[24];
 	uint8_t pd_flag;
 	uint8_t p_ty;
 	uint32_t srv_ref;
@@ -94,7 +94,7 @@ typedef struct{
 	uint32_t freq;
 	uint8_t freq_id;
 	uint8_t number_of_components;
-	dab_component_t components[5];
+	dab_component_t components[3];
 }dab_service_t;
 
 typedef struct{
@@ -111,7 +111,7 @@ typedef struct{
 
 typedef struct{
 	uint16_t id;
-	uint8_t label[16];
+	uint8_t label[17];
 	uint32_t freq;
 	uint8_t freq_id;
 }dab_ensemble_t;
@@ -155,6 +155,15 @@ void SI468x_dab_get_digital_service_list();
 void Si468x_dab_start_digital_service(uint32_t service_id, uint32_t component_id);
 uint8_t Si468x_dab_get_ensemble_info();
 void Si468x_dab_full_scan();
+void Si468x_dab_get_audio_info();
+void Si468x_dab_get_event_status();
+void Si468x_dab_test_get_ber_info();
+
+
+
+void Si468x_dab_get_time();
+
+void Si468x_play_next_station();
 
 
 #endif /* INC_SI468X_H_ */

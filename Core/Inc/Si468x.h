@@ -116,6 +116,64 @@ typedef struct{
 	uint8_t freq_id;
 }dab_ensemble_t;
 
+typedef struct{
+	//RD_REPLY byte 0
+	uint8_t cts				: 1;	//clear to send
+	uint8_t err_cmd			: 1;	//command error - The command that was sent is either not a valid command in this mode, had an invalid argument, or is otherwise not allowed
+	uint8_t d_acq_int		: 1;	//Digital radio link change interrupt indicator. Indicates that something in the digital radio ensemble acquisition status has changed. Service by sending the DAB_DIGRAD_STATUS command
+	uint8_t d_srv_int		: 1;	//Indicates that an enabled data component of one of the digital services requires attention. Service by sending the GET_DIGITAL_SERVICE_DATA command.
+	uint8_t rsvd_1			: 3;	//ignore
+	uint8_t stc_int			: 1;	// seek/tune complete interrupt
+	//RD_REPLY byte 1
+	uint8_t rsvd_2			: 1;	//ignore
+	uint8_t d_fic_int		: 1;	//DAB FIC event change interrupt indicator. Indicates that a new event related to the DAB FIC has occurred. Service by sending the DAB_GET_FIC_DATA command
+	uint8_t d_evnt_int		: 1;	//Digital radio event change interrupt indicator. Indicates that a new event related to the digital radio has occurred. Service by sending the DAB_DIGRAD_STATUS command
+	uint8_t rsvd_3			: 4;	//ignore
+	uint8_t d_acf_int		: 1;	//HD radio ACF status change interrupt indicator. Indicates that a new interrupt related to the HD radio ACF feature has occurred. Service by sending the HD_ACF_STATUS command
+	//RD_REPLY byte 2
+	uint8_t rsvd_stat0		: 8;	//reserved for future use
+	//RD_REPLY byte 3
+	uint8_t pwr_up_state	: 2;	//Indicates the powerup state of the system.
+	uint8_t rf_fe_err		: 1;	//indicates that the RF front end of the system is in an unexpected state
+	uint8_t dsp_err			: 1;	//The DSP has encountered a frame overrun. This is a fatal error
+	uint8_t rep_of_err		: 1;	//When set, the control interface has dropped data during a reply read, which is a fatal error. This is generally caused by running at a SPI clock rate that is too fast for the given data arbiter and memory speed
+	uint8_t cmd_of_err		: 1;	//When set, the control interface has dropped data during a command write, which is a fatal error. This is generally caused by running at a SPI clock rate that is too fast for the data arbiter and memory speed
+	uint8_t arb_err			: 1;	//When set, an arbiter error has occurred. The only way to recover is for the user to reset the chip.
+	uint8_t err_nr			: 1;	//When set a non-recoverable error has occurred. The system keep alive timer has expired. The only way to recover is for the user to reset the chip.
+
+}dab_flags_t;
+
+typedef struct{
+	//reply byte 4 - EVENT_INT
+	uint8_t recfg_int		: 1;	//Ensemble reconfiguration event. Indicates that an ensemble reconfiguration has occurred
+	uint8_t recfg_wrn_int	: 1;	//Ensemble reconfiguration warning. Indicates that an ensemble reconfiguration will occur in 6 seconds
+	uint8_t audio_int		: 1;	//When set indicates that a change in the audio playback state has occurred (mute or unmute)
+	uint8_t anno_int		: 1;	//announcement information interrupt. Indicates that an announcement event (started or stopped) is available
+	uint8_t oe_serv_int		: 1;	//Other Ensemble (OE) Services interrupt. Indicates that new OE service information is available or has changed. The other ensemble information is retrieved with the DAB_GET_OE_SERVICES_INFO command
+	uint8_t serv_link_int	: 1;	//Service linking information interrupt. Indicates that new service linking information is available or has changed. The service linking information list is retrieved with the DAB_GET_SERVICE_LINKING_INFO command
+	uint8_t freq_info_int	: 1;	//New Frequency Information interrupt. Indicates that new Frequency Information is available. The Frequency Information list is retrieved with the DAB_GET_FREQ_INFO command. The rate at which frequency information interrupts can occur is defined by the DAB_EVENT_MIN_FREQINFO_PERIOD property
+	uint8_t srv_list_int	: 1;	//New service list interrupt. Indicates that a new digital service list is available. The new service list is retrieved with the GET_DIGITAL_SERVICE_LIST command.
+
+	//reply byte 5 - EVENT_STATUS
+	uint8_t rsvd_1			: 2;	//ignore
+	uint8_t audio			: 1;	//When set, the audio system is rendering audio. See the AUDIO_STATUS field of this command's response for additional audio details
+	uint8_t anno			: 1;	//Announcement available
+	uint8_t oe_serv			: 1;	//Indicates that OE service information is available (FIG0/24). The OE service information is retrieved with the [ref DAB_GET_OE_SERVICES_INFO] command.
+	uint8_t serv_link		: 1;	//Service linking information (FIG 0/6) available. Indicates that service linking information is available. The service linking information list is retrieved with the [ref DAB_GET_SERVICE_LINKING_INFO] command
+	uint8_t freq_info		: 1;	//Frequency Information (FI) (FIG0/21) available. Indicates that Frequency Information (FI) is available. The FI list is retrieved with the [ref DAB_GET_FREQ_INFO] command
+	uint8_t srv_list		: 1;	//Service list available. Indicates that a digital service list is available. The service list is retrieved with the [ref GET_DIGITAL_SERVICE_LIST] command. If a service list is not available or it is in transition, this bit will be low. When the service list is in transition, this bit will remain low until the service list debounce timer has expired. See the [ref DAB_EVENT_MIN_SVRLIST_PERIOD] property for more details.
+
+	//reply byte 6 & 7 - SVRLISTVER
+	uint8_t srv_list_ver_lo	: 8;	//Indicates the current version of the digital service list. This field is incremented by 1 each time the service list is updated. The host can use this field to help determine if a new service list needs to be collected
+	uint8_t srv_list_ver_hi	: 8;
+
+	//reply byte 8 - AUDIO_STATUS
+	uint8_t rsvd_2			: 4;	//reserved,  unused, ignore
+	uint8_t mute_eng		: 1;	//When set, the audio system has been muted by the host.
+	uint8_t sm_eng			: 1;	//When set, the audio system has engaged the softmute system.
+	uint8_t blk_error		: 1;	//When set the audio system has detected errors in the encoded audio blocks. This event will trigger an AUDIOINT interrupt and clear the AUDIO bit. The BLK_ERROR bit is sticky and is cleared by setting the CLR_AUDIO_STATUS bit of this command's OPTION_BITS field.
+	uint8_t blk_loss		: 1;	//When set the audio system has detected an audio block loss event. This occurs when no audio blocks are available to decode. This event will trigger an AUDIOINT interrupt and clear the AUDIO bit. The BLK_LOSS bit is sticky and is cleared by setting the CLR_AUDIO_STATUS bit of this command's OPTION_BITS field
+}dab_events_t;
 
 
 void Si468x_init();
@@ -157,9 +215,9 @@ uint8_t Si468x_dab_get_ensemble_info();
 void Si468x_dab_full_scan();
 void Si468x_dab_get_audio_info();
 void Si468x_dab_get_event_status();
+void Si468x_dab_get_component_info(uint32_t service_id, uint8_t component_id);
+
 void Si468x_dab_test_get_ber_info();
-
-
 
 void Si468x_dab_get_time();
 

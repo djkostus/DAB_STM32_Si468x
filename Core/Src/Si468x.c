@@ -15,6 +15,7 @@
 #include "debug_uart.h"
 #include "dab_defs.h"
 
+
 #define BOOT_WRITE_STEPS 3							//number of bootloader write steps
 
 #define SIGNAL_CHECK_INTERVAL 50					//interval between signal quality check during scanning
@@ -24,7 +25,7 @@
 uint8_t dab_spi_tx_buffer[SPI_TX_BUFFER_SIZE];		//SPI TX Buffer using to send data to Si468x
 uint8_t dab_spi_rx_buffer[SPI_RX_BUFFER_SIZE];		//SPI RX Buffer using to read data from Si468x
 
-char itoa_buffer[32];								//buffer using to send debug informations by UART, it is necessary for itoa function
+char itoa_buffer[64];								//buffer using to send debug informations by UART, it is necessary for itoa function
 
 RETURN_CODE status = 0;								//return status during executing some commands on Si468x
 
@@ -32,6 +33,10 @@ uint32_t freq_table[48];							//table of frequencies (channels) read from Si468
 uint8_t freq_cnt = 0;								//quantity of frequencies in Si468x memory
 
 sig_metrics_t sig_metrics;							//struct that contains some metrics informing about signal quality and status
+
+dab_flags_t dab_flags;								//struct that contains DAB flags obtained during RD REPLY Command
+
+dab_events_t dab_events;							//struct that contains info about DAB flags obtained during DAB_GET_EVENT_STATUS command
 
 dab_ensemble_t ensembles_list[10];					//list of ensembles found during full scan
 dab_service_t services_list[50];					//list of services found during full scan
@@ -54,19 +59,23 @@ void Si468x_init()
 	Si468x_boot();
 	Si468x_get_part_info();
 	Si468x_get_sys_state();
-	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_CFG, 0x01); //włączanie lub wyłącznie switcha front-end, prawdopodobnie dla dab dać 0x00, dla FM 0x01
-	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARM, 0xF8A9); //dla DAB 0xF8A9 lub 0xF784, sprawdzic jak lepiej dziala. Dla FM 0xEDB5.
-	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARB, 0x01C6); //dla DAB 0x01C6 lub 0x01D8, sprawdzic jak lepiej dziala. Dla FM 0x01E3.
-	Si468x_set_property(SI468x_PROP_DAB_VALID_RSSI_THRESHOLD, 0x12); //prog RSSI od kiedy łapie kanał, default 12
-	Si468x_set_property(SI468x_PROP_DAB_XPAD_ENABLE, 0x4005); //określa które featury PAD będą przesyłane do hosta
-	Si468x_set_property(SI468x_PROP_DAB_EVENT_MIN_SVRLIST_PERIOD, 0x01); //określa co ile będzie aktualizowana lista usług, x100 ms. Bylo 6, testowo 1, zeby lepiej czytac nazwy
-	Si468x_set_property(SI468x_PROP_DAB_EVENT_MIN_SVRLIST_PERIOD_RECONFIG, 0x01); //określa co ile będzie aktualizowana lista usług w trakcie rekonfiguracji, x100 ms
-	Si468x_set_property(SI468x_PROP_DAB_ACF_ENABLE, 0x01);	//tylko soft mute włączone przy slabym sygnale
-	Si468x_set_property(SI468x_PROP_DAB_ACF_MUTE_SIGLOSS_THRESHOLD, 0x05);	//próg wyciszania audio jak sygnal jest utracony, default 0x06
-	Si468x_set_property(SI468x_PROP_DAB_ACF_SOFTMUTE_BER_LIMITS, 0xE2C4); //limit BER kiedy soft mute zadziała. Defaultowo 0xE2A6
-	Si468x_dab_get_freq_list(); //odczytujemy z ukladu liste czestotliwosci do tablicy
+	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_CFG, 0x01); 						//włączanie lub wyłącznie switcha front-end, prawdopodobnie dla dab dać 0x00, dla FM 0x01
+	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARM, 0xF8A9); 						//dla DAB 0xF8A9 lub 0xF784, sprawdzic jak lepiej dziala. Dla FM 0xEDB5.
+	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARB, 0x01C6); 						//dla DAB 0x01C6 lub 0x01D8, sprawdzic jak lepiej dziala. Dla FM 0x01E3.
+	Si468x_set_property(SI468x_PROP_DAB_VALID_RSSI_THRESHOLD, 0x7); 				//prog RSSI od kiedy łapie kanał, default 12
+	Si468x_set_property(SI468x_PROP_DAB_VALID_RSSI_TIME, 0x30); 					//czas po ktorym na podstawie RSSI jest określany Valid, od 0 do 63 ms, default 30 = 0x1e
+	Si468x_set_property(SI468x_PROP_DAB_VALID_ACQ_TIME, 0xBB8); 					//czas jaki się czeka na osiągnięcie ACQ, jak nie osiagnie to uznaje ze nie ma sygnalu, od 0 do 4095 ms, default 2000 = 0x7D0
+	Si468x_set_property(SI468x_PROP_DAB_XPAD_ENABLE, 0x4005); 						//określa które featury PAD będą przesyłane do hosta
+	Si468x_set_property(SI468x_PROP_DAB_EVENT_MIN_SVRLIST_PERIOD, 0x01); 			//określa co ile będzie aktualizowana lista usług, x100 ms. Bylo 6, testowo 1, zeby lepiej czytac nazwy
+	Si468x_set_property(SI468x_PROP_DAB_EVENT_MIN_SVRLIST_PERIOD_RECONFIG, 0x01); 	//określa co ile będzie aktualizowana lista usług w trakcie rekonfiguracji, x100 ms
+	Si468x_set_property(SI468x_PROP_DAB_ACF_ENABLE, 0x01);							//tylko soft mute włączone przy slabym sygnale
+	Si468x_set_property(SI468x_PROP_DAB_ACF_MUTE_SIGLOSS_THRESHOLD, 0x05);			//próg wyciszania audio jak sygnal jest utracony, default 0x06
+	Si468x_set_property(SI468x_PROP_DAB_ACF_SOFTMUTE_BER_LIMITS, 0xE2C4); 			//limit BER kiedy soft mute zadziała. Defaultowo 0xE2A6
+	Si468x_set_property(SI468x_PROP_DIGITAL_SERVICE_INT_SOURCE, 0x01);				//Enables the DSRVPCKTINT interrupt of the GET_DIGITAL_SERVICE_DATA command
 
-//	Si468x_get_sys_state(); //kontrolnie zeby sprawdzic czy demod dziala
+	Si468x_dab_get_freq_list(); 													//odczytujemy z ukladu liste czestotliwosci do tablicy
+
+	Si468x_get_sys_state(); //kontrolnie zeby sprawdzic czy demod dziala
 
 	Si468x_dab_full_scan();
 
@@ -582,104 +591,81 @@ void Si468x_dab_get_digital_service_list()
 
 	#define LIST_READ_OFFSET 4 			//Offset to make parsing easier, it comes from some padding data before list
 
-//	uint8_t complete_flag = 0;			//flag informing that all service names are obtained
+	dab_spi_tx_buffer[0] = SI468X_CMD_GET_DIGITAL_SERVICE_LIST; 	//Command Code Start Digital Service
+	dab_spi_tx_buffer[1] = 0x00;									//for DAB always 0 - as in documentation
 
-//	do
-//	{
-		dab_spi_tx_buffer[0] = SI468X_CMD_GET_DIGITAL_SERVICE_LIST; 	//Command Code Start Digital Service
-		dab_spi_tx_buffer[1] = 0x00;									//for DAB always 0 - as in documentation
+	status = Si468x_write_command(2, dab_spi_tx_buffer);
+	HAL_Delay(1);
+	status = Si468x_read_reply(500, dab_spi_rx_buffer);
 
-		status = Si468x_write_command(2, dab_spi_tx_buffer);
-		HAL_Delay(1);
-		status = Si468x_read_reply(500, dab_spi_rx_buffer);
+	send_debug_msg("--------------DAB Get Digital Service List---------------", CRLF_SEND);
 
-		send_debug_msg("--------------DAB Get Digital Service List---------------", CRLF_SEND);
+	if(dab_spi_rx_buffer[0] & 0x40)
+	{
+		send_debug_msg("Command Error!", CRLF_SEND);
+	}
 
-		if(dab_spi_rx_buffer[0] & 0x40)
+	list_size = dab_spi_rx_buffer[0 + LIST_READ_OFFSET] + (dab_spi_rx_buffer[1 + LIST_READ_OFFSET] << 8);
+	number_of_services = dab_spi_rx_buffer[4 + LIST_READ_OFFSET];
+
+	//-----read services info---------------------------------------------------------------------------------------------------------------
+	for(uint8_t service_index = 0; service_index < number_of_services; service_index++)
+	{
+		services_list[service_index + actual_services].freq = actual_freq;
+		services_list[service_index + actual_services].freq_id = actual_freq_id;
+
+		services_list[service_index + actual_services].pd_flag = dab_spi_rx_buffer[12 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x01;
+		services_list[service_index + actual_services].number_of_components = dab_spi_rx_buffer[13 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F;
+
+		//ignore service with PD Flag = 1 - it's data service, not audio service
+		if(services_list[service_index + actual_services].pd_flag)
 		{
-			send_debug_msg("Command Error!", CRLF_SEND);
-		}
-
-		list_size = dab_spi_rx_buffer[0 + LIST_READ_OFFSET] + (dab_spi_rx_buffer[1 + LIST_READ_OFFSET] << 8);
-		number_of_services = dab_spi_rx_buffer[4 + LIST_READ_OFFSET];
-
-		//-----read services info---------------------------------------------------------------------------------------------------------------
-		for(uint8_t service_index = 0; service_index < number_of_services; service_index++)
-		{
-			services_list[service_index + actual_services].freq = actual_freq;
-			services_list[service_index + actual_services].freq_id = actual_freq_id;
-
-			services_list[service_index + actual_services].pd_flag = dab_spi_rx_buffer[12 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x01;
-			services_list[service_index + actual_services].number_of_components = dab_spi_rx_buffer[13 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F;
-
-			//ignore service with PD Flag = 1 - it's data service, not audio service
-			if(services_list[service_index + actual_services].pd_flag)
-			{
-				services_count++;
-				components_count += services_list[service_index + actual_services].number_of_components;
-				service_index--;
-				number_of_services--;
-				continue;
-			}
-
-			services_list[service_index + actual_services].p_ty = (dab_spi_rx_buffer[12 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x3E) >> 1;
-
-			//it's not necessary to check pd flag because stations with pd_flag = 1 are ignored now, but it's for future purposes
-			switch(services_list[service_index + actual_services].pd_flag)
-			{
-				case 0:
-					services_list[service_index + actual_services].srv_ref = dab_spi_rx_buffer[8 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] + ((dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F) << 8);
-					services_list[service_index + actual_services].country_id = (dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0xF0) >> 4;
-					services_list[service_index + actual_services].service_id = (services_list[service_index + actual_services].country_id << 12) + services_list[service_index + actual_services].srv_ref;
-					break;
-
-				case 1:
-					services_list[service_index + actual_services].srv_ref = dab_spi_rx_buffer[8 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] + (dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] << 8) + ((dab_spi_rx_buffer[10 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F) << 16);
-					services_list[service_index + actual_services].country_id = (dab_spi_rx_buffer[10 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0xF0) >> 4;
-					services_list[service_index + actual_services].service_id = (services_list[service_index + actual_services].country_id << 20) + services_list[service_index + actual_services].srv_ref;
-					break;
-
-				default:
-					break;
-			}
-
-			for(uint8_t name_index = 0; name_index <= 15; name_index++)
-			{
-				services_list[service_index + actual_services].name[name_index] = dab_spi_rx_buffer[16 + name_index + LIST_READ_OFFSET  + 24 * services_count + 4 * components_count];
-				if(services_list[service_index + actual_services].name[name_index] == 0x86)	//Correct "ó" coding: 0x86 -> 0xF3, ó as o: 0x86 -> 0x6F
-				{
-					services_list[service_index + actual_services].name[name_index] = 0x6F;
-				}
-			}
-
-			//----read component info---------------------------------------------------------------------------------------------
-			for(uint8_t component_index = 0; component_index < services_list[service_index + actual_services].number_of_components; component_index++)
-			{
-				services_list[service_index + actual_services].components[component_index].tm_id = (dab_spi_rx_buffer[33 + LIST_READ_OFFSET  + 24 * services_count + 4 * components_count] & 0xC0) >> 14;
-				services_list[service_index + actual_services].components[component_index].subchannel_id = dab_spi_rx_buffer[32 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x3F;
-				components_count++;
-			}
 			services_count++;
+			components_count += services_list[service_index + actual_services].number_of_components;
+			service_index--;
+			number_of_services--;
+			continue;
 		}
 
-		//check if informations are complete, if not - read again
-			//
+		services_list[service_index + actual_services].p_ty = (dab_spi_rx_buffer[12 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x3E) >> 1;
 
-//		for(uint8_t service_idx = 0; service_idx < number_of_services; service_idx++)
-//		{
-//			if(services_list[service_idx + actual_services].name[1])
-//			{
-//				complete_flag = 1;
-//			}
-//			else
-//			{
-//				complete_flag = 0;
-//			}
-//
-//		}
-//		HAL_Delay(5);
-//	}
-//	while(!complete_flag);
+		//it's not necessary to check pd flag because stations with pd_flag = 1 are ignored now, but it's for future purposes
+		switch(services_list[service_index + actual_services].pd_flag)
+		{
+			case 0:
+				services_list[service_index + actual_services].srv_ref = dab_spi_rx_buffer[8 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] + ((dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F) << 8);
+				services_list[service_index + actual_services].country_id = (dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0xF0) >> 4;
+				services_list[service_index + actual_services].service_id = (services_list[service_index + actual_services].country_id << 12) + services_list[service_index + actual_services].srv_ref;
+				break;
+
+			case 1:
+				services_list[service_index + actual_services].srv_ref = dab_spi_rx_buffer[8 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] + (dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] << 8) + ((dab_spi_rx_buffer[10 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F) << 16);
+				services_list[service_index + actual_services].country_id = (dab_spi_rx_buffer[10 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0xF0) >> 4;
+				services_list[service_index + actual_services].service_id = (services_list[service_index + actual_services].country_id << 20) + services_list[service_index + actual_services].srv_ref;
+				break;
+
+			default:
+				break;
+		}
+
+		for(uint8_t name_index = 0; name_index <= 15; name_index++)
+		{
+			services_list[service_index + actual_services].name[name_index] = dab_spi_rx_buffer[16 + name_index + LIST_READ_OFFSET  + 24 * services_count + 4 * components_count];
+			if(services_list[service_index + actual_services].name[name_index] == 0x86)	//Correct "ó" coding: 0x86 -> 0xF3, ó as o: 0x86 -> 0x6F
+			{
+				services_list[service_index + actual_services].name[name_index] = 0x6F;
+			}
+		}
+
+		//----read component info---------------------------------------------------------------------------------------------
+		for(uint8_t component_index = 0; component_index < services_list[service_index + actual_services].number_of_components; component_index++)
+		{
+			services_list[service_index + actual_services].components[component_index].tm_id = (dab_spi_rx_buffer[33 + LIST_READ_OFFSET  + 24 * services_count + 4 * components_count] & 0xC0) >> 14;
+			services_list[service_index + actual_services].components[component_index].subchannel_id = dab_spi_rx_buffer[32 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x3F;
+			components_count++;
+		}
+		services_count++;
+	}
 
 	total_services += number_of_services;
 	actual_services += number_of_services;
@@ -740,7 +726,7 @@ void Si468x_dab_start_digital_service(uint32_t service_id, uint32_t component_id
 	dab_spi_tx_buffer[6]  = service_id >> 16;					//Service ID [23:16]
 	dab_spi_tx_buffer[7]  = service_id >> 24;					//Service ID [31:24]
 
-	dab_spi_tx_buffer[8]  = component_id & 0xFF;				//Component ID [7:0] Component ID prawdopodobnie nie ma znaczenia
+	dab_spi_tx_buffer[8]  = component_id & 0xFF;				//Component ID [7:0]
 	dab_spi_tx_buffer[9]  = component_id >> 8;					//Component ID [15:8]
 	dab_spi_tx_buffer[10]  = component_id >> 16;				//Component ID [23:16]
 	dab_spi_tx_buffer[11]  = component_id >> 24;				//Component ID [31:24]
@@ -756,7 +742,6 @@ void Si468x_dab_start_digital_service(uint32_t service_id, uint32_t component_id
 	{
 		send_debug_msg("Service started successfully!", CRLF_SEND);
 	}
-
 }
 
 uint8_t Si468x_dab_get_ensemble_info()
@@ -867,6 +852,12 @@ void Si468x_dab_full_scan()
 
 		if(valid_timeout && fic_q_timeout)
 		{
+			while(!dab_events.srv_list || dab_events.srv_list_int)
+			{
+				Si468x_dab_get_event_status();
+				HAL_Delay(10);
+			}
+
 			if(Si468x_dab_get_ensemble_info())
 			{
 				Si468x_dab_get_digital_service_list();
@@ -1031,13 +1022,87 @@ void Si468x_dab_get_event_status()
 {
 	send_debug_msg("-----------Getting DAB Event Status from Si468x-------------", CRLF_SEND);
 	dab_spi_tx_buffer[0] = SI468X_CMD_DAB_GET_EVENT_STATUS;
-	dab_spi_tx_buffer[1] = 0x00;
+	dab_spi_tx_buffer[1] = 0x03;	//+2 = Clears the AUDIO_STATUS error indicators BLK_ERROR and BLK_LOSS of this command, +1 = Clears all pending DAB event interrupt bits
 
-
-	//dokonczyc
 	status = Si468x_write_command(2, dab_spi_tx_buffer);
 	HAL_Delay(1);
-	status = Si468x_read_reply(12, dab_spi_rx_buffer);
+	status = Si468x_read_reply(9, dab_spi_rx_buffer);
+
+	dab_events.recfg_int = (dab_spi_rx_buffer[4] & 0x80 >> 7);
+	dab_events.recfg_wrn_int = (dab_spi_rx_buffer[4] & 0x40 >> 6);
+	dab_events.audio_int = (dab_spi_rx_buffer[4] & 0x20 >> 5);
+	dab_events.anno_int = (dab_spi_rx_buffer[4] & 0x10 >> 4);
+	dab_events.oe_serv_int = (dab_spi_rx_buffer[4] & 0x08 >> 3);
+	dab_events.serv_link_int = (dab_spi_rx_buffer[4] & 0x04 >> 2);
+	dab_events.freq_info_int = (dab_spi_rx_buffer[4] & 0x02 >> 1);
+	dab_events.srv_list_int = (dab_spi_rx_buffer[4] & 0x01);
+
+	dab_events.audio = (dab_spi_rx_buffer[5] & 0x20 >> 5);
+	dab_events.anno = (dab_spi_rx_buffer[5] & 0x10 >> 4);
+	dab_events.oe_serv = (dab_spi_rx_buffer[5] & 0x08 >> 3);
+	dab_events.serv_link = (dab_spi_rx_buffer[5] & 0x04 >> 2);
+	dab_events.freq_info = (dab_spi_rx_buffer[5] & 0x02 >> 1);
+	dab_events.srv_list = (dab_spi_rx_buffer[5] & 0x01);
+
+	dab_events.srv_list_ver_lo = dab_spi_rx_buffer[6];
+	dab_events.srv_list_ver_hi = dab_spi_rx_buffer[7];
+
+	dab_events.mute_eng = (dab_spi_rx_buffer[8] & 0x08 >> 3);
+	dab_events.sm_eng = (dab_spi_rx_buffer[8] & 0x04 >> 2);
+	dab_events.blk_error = (dab_spi_rx_buffer[8] & 0x02 >> 1);
+	dab_events.blk_loss = (dab_spi_rx_buffer[8] & 0x01);
+}
+
+void Si468x_dab_get_component_info(uint32_t service_id, uint8_t component_id)
+{
+	send_debug_msg("-----------Getting DAB Component Info-------------", CRLF_SEND);
+
+	dab_spi_tx_buffer[0] = SI468X_CMD_DAB_GET_COMPONENT_INFO;
+	dab_spi_tx_buffer[1] = 0x00;	//always 0 as in documentation
+	dab_spi_tx_buffer[2] = 0x00;	//always 0 as in documentation
+	dab_spi_tx_buffer[3] = 0x00;	//always 0 as in documentation
+
+	dab_spi_tx_buffer[4]  = service_id & 0xFF;					//Service ID [7:0]
+	dab_spi_tx_buffer[5]  = service_id >> 8;					//Service ID [15:8]
+	dab_spi_tx_buffer[6]  = service_id >> 16;					//Service ID [23:16]
+	dab_spi_tx_buffer[7]  = service_id >> 24;					//Service ID [31:24]
+
+	dab_spi_tx_buffer[8]  = component_id & 0xFF;				//Component ID [7:0]
+	dab_spi_tx_buffer[9]  = component_id >> 8;					//Component ID [15:8]
+	dab_spi_tx_buffer[10]  = component_id >> 16;				//Component ID [23:16]
+	dab_spi_tx_buffer[11]  = component_id >> 24;				//Component ID [31:24]
+
+
+	status = Si468x_write_command(12, dab_spi_tx_buffer);
+	HAL_Delay(5);
+	status = Si468x_read_reply(26, dab_spi_rx_buffer);
+
+	uint8_t global_id;
+	uint8_t language;
+	uint8_t label[16];
+	uint16_t char_abbrev;
+
+	language = dab_spi_rx_buffer[6] & 0x3F;
+
+	for(uint8_t idx = 0; idx < 16; idx++)
+	{
+		label[idx] = dab_spi_rx_buffer[8 + idx];
+	}
+
+	char_abbrev = dab_spi_rx_buffer[24] + (dab_spi_rx_buffer[25] << 8);
+
+	send_debug_msg("Global ID: ", CRLF_NO_SEND);
+	send_debug_msg(itoa(global_id, itoa_buffer, 10), CRLF_SEND);
+
+	send_debug_msg("Language: ", CRLF_NO_SEND);
+	send_debug_msg(itoa(language, itoa_buffer, 10), CRLF_SEND);
+
+	send_debug_msg("Label:            ", CRLF_NO_SEND);
+	send_debug_msg((char*)label, CRLF_SEND);
+
+	send_debug_msg("Char abbrev mask: ", CRLF_NO_SEND);
+	send_debug_msg(itoa(global_id, itoa_buffer, 2), CRLF_SEND);
+
 }
 
 
@@ -1097,13 +1162,18 @@ void Si468x_play_next_station()
 	send_debug_msg("---------------------------------", CRLF_SEND);
 	send_debug_msg("Playing Station ", CRLF_NO_SEND);
 	send_debug_msg(itoa(actual_station, itoa_buffer, 10), CRLF_SEND);
-	  Si468x_dab_tune_freq(services_list[actual_station].freq_id); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
-	  Si468x_dab_start_digital_service(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
-	  Si468x_dab_digrad_status();
-	  Si468x_dab_get_audio_info();
-	  actual_station++;
-	  if(actual_station == total_services)
-	  {
-		  actual_station = 0;
-	  }
+	Si468x_dab_tune_freq(services_list[actual_station].freq_id); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
+	Si468x_dab_get_component_info(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
+	Si468x_dab_start_digital_service(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
+
+	Si468x_dab_digrad_status();
+	Si468x_dab_get_audio_info();
+
+
+
+	actual_station++;
+	if(actual_station == total_services)
+	{
+	  actual_station = 0;
+	}
 }

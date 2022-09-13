@@ -103,7 +103,6 @@ int main(void)
   /* USER CODE BEGIN 2 */
   send_debug_msg("STM32 is ready.", CRLF_SEND);
 
-  HAL_TIM_Base_Start_IT(&htim10);
   HAL_TIM_Base_Start_IT(&htim11);
 
   ILI9341_Init();
@@ -122,7 +121,7 @@ int main(void)
 	  {
 		  Si468x_play_next_station();
 	  }
-	  HAL_Delay(200);
+	  HAL_Delay(50);
 	  Si468x_dab_digrad_status();
 
     /* USER CODE END WHILE */

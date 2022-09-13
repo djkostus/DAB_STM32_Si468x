@@ -20,6 +20,8 @@ void Display_main_screen();
 void Display_dab_digrad_status_background();
 void Display_dab_digrad_status_data(dab_digrad_status_t digrad_status);
 
+void Display_time(time_t time_val);
+
 void Display_init_screen();
 
 #endif /* INC_DISPLAY_H_ */

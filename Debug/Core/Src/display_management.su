@@ -1,5 +1,6 @@
-../Core/Src/display_management.c:14:6:Display_clear_screen	16	static
-../Core/Src/display_management.c:21:6:Display_main_screen	16	static
-../Core/Src/display_management.c:66:6:Display_dab_digrad_status_background	16	static
-../Core/Src/display_management.c:91:6:Display_dab_digrad_status_data	16	static
-../Core/Src/display_management.c:158:6:Display_init_screen	16	static
+../Core/Src/display_management.c:15:6:Display_clear_screen	16	static
+../Core/Src/display_management.c:22:6:Display_main_screen	16	static
+../Core/Src/display_management.c:67:6:Display_dab_digrad_status_background	16	static
+../Core/Src/display_management.c:114:6:Display_dab_digrad_status_data	16	static
+../Core/Src/display_management.c:204:6:Display_time	24	static
+../Core/Src/display_management.c:233:6:Display_init_screen	16	static

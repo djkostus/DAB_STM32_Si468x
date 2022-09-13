@@ -8,6 +8,7 @@
 #include "main.h"
 #include "spi.h"
 #include "i2c.h"
+#include "tim.h"
 #include "Si468x.h"
 #include "Si468x_defs.h"
 #include "patch_mini.h"
@@ -38,6 +39,7 @@ dab_digrad_status_t dab_digrad_status;							//struct that contains some metrics
 
 rd_reply_t rd_reply;								//struct that contains Si468x flags obtained during RD REPLY Command
 dab_events_t dab_events;							//struct that contains info about DAB flags obtained during DAB_GET_EVENT_STATUS command
+time_t time;										//struct that contains data & time obtained from DAB+
 
 dab_ensemble_t ensembles_list[10];					//list of ensembles found during full scan
 dab_service_t services_list[50];					//list of services found during full scan
@@ -80,6 +82,8 @@ void Si468x_init()
 
 	Display_clear_screen();
 	Display_dab_digrad_status_background();
+
+	HAL_TIM_Base_Start_IT(&htim10);	//enable this timer = enable continuously show signal info
 
 	Si468x_dab_full_scan();
 
@@ -546,6 +550,14 @@ void Si468x_dab_digrad_status()
 	HAL_Delay(1);
 	status = Si468x_read_reply(40, dab_spi_rx_buffer);
 	memcpy((uint8_t*)&dab_digrad_status, (uint8_t*)&dab_spi_rx_buffer[4], sizeof(dab_digrad_status));	//
+	if(dab_digrad_status.snr > 20)
+	{
+		dab_digrad_status.snr = 0; //snr powyzej 20 nie wystapi, a skrajnie duza wartosc podczas skanowania jest przeklamana
+	}
+	if(dab_digrad_status.cnr > 54)
+	{
+		dab_digrad_status.cnr = 0; //cnr powyzej 54 nie wystapi, a skrajnie duza wartosc podczas skanowania jest przeklamana
+	}
 	Display_dab_digrad_status_data(dab_digrad_status);
 }
 
@@ -946,30 +958,6 @@ void Si468x_dab_get_event_status()
 	status = Si468x_read_reply(9, dab_spi_rx_buffer);
 
 	memcpy((uint8_t*)&dab_events, (uint8_t*)&dab_spi_rx_buffer[4], sizeof(rd_reply_t));
-
-//	dab_events.recfg_int = (dab_spi_rx_buffer[4] & 0x80 >> 7);
-//	dab_events.recfg_wrn_int = (dab_spi_rx_buffer[4] & 0x40 >> 6);
-//	dab_events.audio_int = (dab_spi_rx_buffer[4] & 0x20 >> 5);
-//	dab_events.anno_int = (dab_spi_rx_buffer[4] & 0x10 >> 4);
-//	dab_events.oe_serv_int = (dab_spi_rx_buffer[4] & 0x08 >> 3);
-//	dab_events.serv_link_int = (dab_spi_rx_buffer[4] & 0x04 >> 2);
-//	dab_events.freq_info_int = (dab_spi_rx_buffer[4] & 0x02 >> 1);
-//	dab_events.srv_list_int = (dab_spi_rx_buffer[4] & 0x01);
-//
-//	dab_events.audio = (dab_spi_rx_buffer[5] & 0x20 >> 5);
-//	dab_events.anno = (dab_spi_rx_buffer[5] & 0x10 >> 4);
-//	dab_events.oe_serv = (dab_spi_rx_buffer[5] & 0x08 >> 3);
-//	dab_events.serv_link = (dab_spi_rx_buffer[5] & 0x04 >> 2);
-//	dab_events.freq_info = (dab_spi_rx_buffer[5] & 0x02 >> 1);
-//	dab_events.srv_list = (dab_spi_rx_buffer[5] & 0x01);
-//
-////	dab_events.srv_list_ver_lo = dab_spi_rx_buffer[6];
-////	dab_events.srv_list_ver_hi = dab_spi_rx_buffer[7];
-//
-//	dab_events.mute_eng = (dab_spi_rx_buffer[8] & 0x08 >> 3);
-//	dab_events.sm_eng = (dab_spi_rx_buffer[8] & 0x04 >> 2);
-//	dab_events.blk_error = (dab_spi_rx_buffer[8] & 0x02 >> 1);
-//	dab_events.blk_loss = (dab_spi_rx_buffer[8] & 0x01);
 }
 
 void Si468x_dab_get_component_info(uint32_t service_id, uint8_t component_id)
@@ -1043,9 +1031,6 @@ void Si468x_dab_test_get_ber_info()	//póki co odczyt BER nie działa
 
 void Si468x_dab_get_time()
 {
-	uint16_t year;
-	uint8_t months, days, hours, minutes, seconds;
-
 	send_debug_msg("--------------Getting time from Si468x-------------------", CRLF_SEND);
 
 	do
@@ -1061,24 +1046,21 @@ void Si468x_dab_get_time()
 	HAL_Delay(1);
 	status = Si468x_read_reply(11, dab_spi_rx_buffer);
 
-	year = (dab_spi_rx_buffer[5] << 8) + dab_spi_rx_buffer[4];
-	months = dab_spi_rx_buffer[6];
-	days = dab_spi_rx_buffer[7];
-	hours = dab_spi_rx_buffer[8];
-	minutes = dab_spi_rx_buffer[9];
-	seconds = dab_spi_rx_buffer[10];
+	memcpy((uint8_t*)&time, (uint8_t*)&dab_spi_rx_buffer[4], sizeof(time));
 
-	send_debug_msg(itoa(hours, itoa_buffer, 10), CRLF_NO_SEND);
-	send_debug_msg(":", CRLF_NO_SEND);
-	send_debug_msg(itoa(minutes, itoa_buffer, 10), CRLF_NO_SEND);
-	send_debug_msg(":", CRLF_NO_SEND);
-	send_debug_msg(itoa(seconds, itoa_buffer, 10), CRLF_SEND);
+	Display_time(time);
 
-	send_debug_msg(itoa(days, itoa_buffer, 10), CRLF_NO_SEND);
+	send_debug_msg(itoa(time.hour, itoa_buffer, 10), CRLF_NO_SEND);
+	send_debug_msg(":", CRLF_NO_SEND);
+	send_debug_msg(itoa(time.minute, itoa_buffer, 10), CRLF_NO_SEND);
+	send_debug_msg(":", CRLF_NO_SEND);
+	send_debug_msg(itoa(time.second, itoa_buffer, 10), CRLF_SEND);
+
+	send_debug_msg(itoa(time.day, itoa_buffer, 10), CRLF_NO_SEND);
 	send_debug_msg(".", CRLF_NO_SEND);
-	send_debug_msg(itoa(months, itoa_buffer, 10), CRLF_NO_SEND);
+	send_debug_msg(itoa(time.month, itoa_buffer, 10), CRLF_NO_SEND);
 	send_debug_msg(".", CRLF_NO_SEND);
-	send_debug_msg(itoa(year, itoa_buffer, 10), CRLF_SEND);
+	send_debug_msg(itoa(time.year, itoa_buffer, 10), CRLF_SEND);
 
 }
 

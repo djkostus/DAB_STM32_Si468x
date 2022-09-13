@@ -111,7 +111,7 @@ typedef struct{
 	uint8_t fic_err				: 1;	//When set to 1, the ensemble is experiencing FIC errors. Signal quality has been degraded and acquisition may be lost
 	uint8_t 					: 4;	//ignore
 	//dab_digrad_status byte 6: RSSI
-	uint8_t rssi				: 8;	//Received signal strength indicator in dBuV.
+	int rssi					: 8;	//Received signal strength indicator in dBuV.
 	//dab_digrad_status byte 7: SNR
 	uint8_t snr					: 8;	//Indicates the current estimate of the digital SNR in dB
 	//dab_digrad_status byte 8: FIC_QUALITY
@@ -206,6 +206,15 @@ typedef struct{
 	uint8_t mute_eng		: 1;	//When set, the audio system has been muted by the host.
 	uint8_t 				: 4;	//ignore
 }dab_events_t;
+
+typedef struct{
+	uint16_t year			: 16;
+	uint8_t month			: 8;
+	uint8_t day				: 8;
+	uint8_t hour			: 8;
+	uint8_t minute			: 8;
+	uint8_t second			: 8;
+}time_t;
 
 
 void Si468x_init();

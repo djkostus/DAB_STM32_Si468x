@@ -15,6 +15,8 @@
 #include "debug_uart.h"
 #include "dab_defs.h"
 
+#include <string.h>
+
 
 #define BOOT_WRITE_STEPS 3							//number of bootloader write steps
 
@@ -32,10 +34,9 @@ RETURN_CODE status = 0;								//return status during executing some commands on
 uint32_t freq_table[48];							//table of frequencies (channels) read from Si468x memory
 uint8_t freq_cnt = 0;								//quantity of frequencies in Si468x memory
 
-sig_metrics_t sig_metrics;							//struct that contains some metrics informing about signal quality and status
+dab_digrad_status_t dab_digrad_status;							//struct that contains some metrics informing about signal quality and status
 
-dab_flags_t dab_flags;								//struct that contains DAB flags obtained during RD REPLY Command
-
+rd_reply_t rd_reply;								//struct that contains Si468x flags obtained during RD REPLY Command
 dab_events_t dab_events;							//struct that contains info about DAB flags obtained during DAB_GET_EVENT_STATUS command
 
 dab_ensemble_t ensembles_list[10];					//list of ensembles found during full scan
@@ -76,6 +77,9 @@ void Si468x_init()
 	Si468x_dab_get_freq_list(); 													//odczytujemy z ukladu liste czestotliwosci do tablicy
 
 	Si468x_get_sys_state(); //kontrolnie zeby sprawdzic czy demod dziala
+
+	Display_clear_screen();
+	Display_dab_digrad_status_background();
 
 	Si468x_dab_full_scan();
 
@@ -244,24 +248,18 @@ uint8_t Si468x_read_single_byte()
 
 RETURN_CODE Si468x_wait_for_CTS(uint16_t timeout)
 {
-	uint16_t i;
-	uint8_t cts_status = 0;
-
-	for(i = 0; i < timeout; i++)
+	for(uint16_t i = 0; i < timeout; i++)
 	{
-		Si468x_read_multiple(1, &cts_status);
-
-		if((cts_status & 0x80) == 0x80)
+		Si468x_read_reply(1, dab_spi_rx_buffer);
+		if(rd_reply.cts)
 		{
-			if((cts_status & 0x40) == 0x40)
+			if(rd_reply.err_cmd)
 			{
 				send_debug_msg("Command Error during waiting for CTS!", CRLF_SEND);
 				return COMMAND_ERROR;
 			}
 			return SUCCESS;
 		}
-
-		// delay function for 1 ms
 		HAL_Delay(1);
 	}
 	send_debug_msg("Timeout error!", CRLF_SEND);
@@ -310,6 +308,9 @@ RETURN_CODE Si468x_write_command(uint16_t length, uint8_t *buffer)
 RETURN_CODE Si468x_read_reply(uint16_t length, uint8_t *buffer)
 {
 	Si468x_read_multiple(length, buffer);
+	//fill rd_reply struct with received data to get values of flags, both commands are working
+//	rd_reply = *((rd_reply_t*)dab_spi_rx_buffer);
+	memcpy((uint8_t*)&rd_reply, (uint8_t*)dab_spi_rx_buffer, sizeof(rd_reply_t));
 	return SUCCESS;
 }
 
@@ -413,7 +414,6 @@ void Si468x_set_property(uint16_t property_id, uint16_t property_value)
 	{
 		send_debug_msg("Property Setting Error!", CRLF_SEND);
 	}
-
 }
 
 uint16_t Si468x_get_property(uint16_t property_id)
@@ -445,7 +445,7 @@ void Si468x_dab_get_freq_list()
 	status = Si468x_write_command(2, dab_spi_tx_buffer);
 	HAL_Delay(1);
 	status = Si468x_read_reply(5, dab_spi_rx_buffer);
-	if(dab_spi_rx_buffer[0] & 0x40)
+	if(rd_reply.err_cmd)
 	{
 		send_debug_msg("Command Error!", CRLF_SEND);
 	}
@@ -492,7 +492,7 @@ void Si468x_dab_tune_freq(uint8_t channel)
 
 	status = Si468x_write_command(6, dab_spi_tx_buffer);
 	status = Si468x_read_reply(1, dab_spi_rx_buffer);
-	if(dab_spi_rx_buffer[0] & 0x40)
+	if(rd_reply.err_cmd)
 	{
 		send_debug_msg("Command Error!", CRLF_SEND);
 	}
@@ -501,7 +501,7 @@ void Si468x_dab_tune_freq(uint8_t channel)
 	{
 		status = Si468x_read_reply(1, dab_spi_rx_buffer);
 
-		if(dab_spi_rx_buffer[0] & 0x01)
+		if(rd_reply.stc_int)
 		{
 			send_debug_msg("Tuned successfully. Time: ", CRLF_NO_SEND);
 			send_debug_msg(itoa(i ,itoa_buffer, 10), CRLF_NO_SEND);
@@ -526,7 +526,7 @@ void Si468x_dab_reset_interrupts()
 	dab_spi_tx_buffer[1] = 0x01;								//Event ACK - clear all DAB event interrupts
 	status = Si468x_write_command(2, dab_spi_tx_buffer);
 	status = Si468x_read_reply(1, dab_spi_rx_buffer);
-	if(dab_spi_rx_buffer[0] & 0x40)
+	if(rd_reply.err_cmd)
 	{
 		send_debug_msg("Command Error!", CRLF_SEND);
 	}
@@ -545,40 +545,8 @@ void Si468x_dab_digrad_status()
 	status = Si468x_write_command(2, dab_spi_tx_buffer);
 	HAL_Delay(1);
 	status = Si468x_read_reply(40, dab_spi_rx_buffer);
-	sig_metrics.rssi = dab_spi_rx_buffer[6];
-	sig_metrics.snr = dab_spi_rx_buffer[7];
-	sig_metrics.fic_bit_cnt = dab_spi_rx_buffer[32] + (dab_spi_rx_buffer[33] << 8) + (dab_spi_rx_buffer[34] << 16) + (dab_spi_rx_buffer[35] << 24);
-	sig_metrics.fic_err_cnt = dab_spi_rx_buffer[36] + (dab_spi_rx_buffer[37] << 8) + (dab_spi_rx_buffer[38] << 16) + (dab_spi_rx_buffer[39] << 24);
-	sig_metrics.fic_q = dab_spi_rx_buffer[8];
-
-	if(dab_spi_rx_buffer[5] & 0x01)
-	{
-		sig_metrics.valid = 1;
-	}
-	else
-	{
-		sig_metrics.valid = 0;
-	}
-
-	if(dab_spi_rx_buffer[5] & 0x04)
-	{
-		sig_metrics.acq = 1;
-	}
-	else
-	{
-		sig_metrics.acq = 0;
-	}
-
-	if(dab_spi_rx_buffer[4] & 0x04)
-	{
-		sig_metrics.acq_int = 1;
-	}
-	else
-	{
-		sig_metrics.acq_int = 0;
-	}
-
-	DisplayDabStatus(sig_metrics);
+	memcpy((uint8_t*)&dab_digrad_status, (uint8_t*)&dab_spi_rx_buffer[4], sizeof(dab_digrad_status));	//
+	Display_dab_digrad_status_data(dab_digrad_status);
 }
 
 void Si468x_dab_get_digital_service_list()
@@ -600,7 +568,7 @@ void Si468x_dab_get_digital_service_list()
 
 	send_debug_msg("--------------DAB Get Digital Service List---------------", CRLF_SEND);
 
-	if(dab_spi_rx_buffer[0] & 0x40)
+	if(rd_reply.err_cmd)
 	{
 		send_debug_msg("Command Error!", CRLF_SEND);
 	}
@@ -669,47 +637,6 @@ void Si468x_dab_get_digital_service_list()
 
 	total_services += number_of_services;
 	actual_services += number_of_services;
-
-	//display informations obtained during parsing ensemble data
-
-//	send_debug_msg("Services list size: ", CRLF_NO_SEND);
-//	send_debug_msg(itoa(list_size, itoa_buffer, 10), CRLF_NO_SEND);
-//	send_debug_msg(" bytes.", CRLF_SEND);
-//
-//	send_debug_msg("Number of services: ", CRLF_NO_SEND);
-//	send_debug_msg(itoa(number_of_services, itoa_buffer, 10), CRLF_SEND);
-//
-//	for(uint8_t i = 0; i < number_of_services; i++)
-//	{
-//		send_debug_msg("--------------------Next service--------------------------", CRLF_SEND);
-//
-//		send_debug_msg("Number: ", CRLF_NO_SEND);
-//		send_debug_msg(itoa(i, itoa_buffer, 10), CRLF_SEND);
-//
-//		send_debug_msg("Service Name: ", CRLF_NO_SEND);
-//		send_debug_msg((char*)services_list[i].name, CRLF_SEND);
-//
-//		send_debug_msg("Service ID: 0x", CRLF_NO_SEND);
-//		send_debug_msg(itoa(services_list[i].service_id, itoa_buffer, 16), CRLF_SEND);
-//
-////		send_debug_msg("PD Flag: ", CRLF_NO_SEND);
-////		send_debug_msg(itoa(services_list[i].pd_flag, itoa_buffer, 10), CRLF_SEND);
-//
-//		send_debug_msg("Program Type: ", CRLF_NO_SEND);
-//		send_debug_msg(itoa(services_list[i].p_ty, itoa_buffer, 10), CRLF_SEND);
-//
-//		send_debug_msg("Number of Components: ", CRLF_NO_SEND);
-//		send_debug_msg(itoa(services_list[i].number_of_components, itoa_buffer, 10), CRLF_SEND);
-//
-//		for(uint8_t j = 0; j < services_list[i].number_of_components; j++)
-//		{
-//			send_debug_msg("----------Next component----------", CRLF_SEND);
-//			send_debug_msg("TM ID : ", CRLF_NO_SEND);
-//			send_debug_msg(itoa(services_list[i].components[j].tm_id, itoa_buffer, 10), CRLF_SEND);
-//			send_debug_msg("Subchannel ID : 0x", CRLF_NO_SEND);
-//			send_debug_msg(itoa(services_list[i].components[j].subchannel_id, itoa_buffer, 16), CRLF_SEND);
-//		}
-//	}
 }
 
 void Si468x_dab_start_digital_service(uint32_t service_id, uint32_t component_id)
@@ -734,7 +661,7 @@ void Si468x_dab_start_digital_service(uint32_t service_id, uint32_t component_id
 	status = Si468x_write_command(12, dab_spi_tx_buffer);
 	HAL_Delay(1);
 	status = Si468x_read_reply(5, dab_spi_rx_buffer);
-	if(dab_spi_rx_buffer[0] & 0x40)
+	if(rd_reply.err_cmd)
 	{
 		send_debug_msg("Command Error!", CRLF_SEND);
 	}
@@ -755,6 +682,7 @@ uint8_t Si468x_dab_get_ensemble_info()
 	HAL_Delay(2);
 	status = Si468x_read_reply(21, dab_spi_rx_buffer);
 
+	//wait for good ensemble name
 	while(!dab_spi_rx_buffer[6])
 	{
 		status = Si468x_write_command(2, dab_spi_tx_buffer);
@@ -762,7 +690,7 @@ uint8_t Si468x_dab_get_ensemble_info()
 		status = Si468x_read_reply(21, dab_spi_rx_buffer);
 	}
 
-	if(dab_spi_rx_buffer[0] & 0x40)
+	if(rd_reply.err_cmd)
 	{
 		send_debug_msg("Command Error!", CRLF_SEND);
 		return 0;
@@ -782,16 +710,6 @@ uint8_t Si468x_dab_get_ensemble_info()
 			{
 				ensembles_list[total_ensembles].label[i] = dab_spi_rx_buffer[6 + i];
 			}
-
-//			send_debug_msg("Label: ", CRLF_NO_SEND);
-//			send_debug_msg((char*)ensembles_list[total_ensembles].label, CRLF_SEND);
-//			send_debug_msg("Ensemble ID: ", CRLF_NO_SEND);
-//			send_debug_msg(itoa(ensembles_list[total_ensembles].id, itoa_buffer, 16), CRLF_SEND);
-//			send_debug_msg("Frequency: ", CRLF_NO_SEND);
-//			send_debug_msg(itoa(ensembles_list[total_ensembles].freq, itoa_buffer, 10), CRLF_NO_SEND);
-//			send_debug_msg(" kHz", CRLF_SEND);
-//			send_debug_msg("Channel: ", CRLF_NO_SEND);
-//			send_debug_msg(dab_channels_names[ensembles_list[total_ensembles].freq_id], CRLF_SEND);
 
 			total_ensembles++;
 			return 1;
@@ -816,15 +734,16 @@ void Si468x_dab_full_scan()
 
 	for(uint8_t freq_index = 0; freq_index < freq_cnt; freq_index++)
 	{
-		sig_metrics.valid = 0;
-		sig_metrics.acq = 0;
-		sig_metrics.fic_q = 0;
+//		dab_digrad_status.valid = 0;
+//		dab_digrad_status.acq = 0;
+//		dab_digrad_status.fic_quality = 0;
 
 		valid_timeout = VALID_TIMEOUT;
 		fic_q_timeout = FIC_Q_TIMEOUT;
 
 		Si468x_dab_tune_freq(freq_index);
-		while(!sig_metrics.valid || !sig_metrics.acq /*|| sig_metrics.fic_q < 100*/)
+
+		do
 		{
 			Si468x_dab_digrad_status();
 			valid_timeout--;
@@ -834,10 +753,11 @@ void Si468x_dab_full_scan()
 				break;
 			}
 			HAL_Delay(SIGNAL_CHECK_INTERVAL);
-		}
+		}while(!dab_digrad_status.valid || !dab_digrad_status.acq);
+
 		if(valid_timeout)
 		{
-			while(sig_metrics.fic_q < 100)
+			do
 			{
 				Si468x_dab_digrad_status();
 				fic_q_timeout--;
@@ -847,16 +767,16 @@ void Si468x_dab_full_scan()
 					break;
 				}
 				HAL_Delay(SIGNAL_CHECK_INTERVAL);
-			}
+			}while(dab_digrad_status.fic_quality < 50);
 		}
 
 		if(valid_timeout && fic_q_timeout)
 		{
-			while(!dab_events.srv_list || dab_events.srv_list_int)
+			do
 			{
 				Si468x_dab_get_event_status();
 				HAL_Delay(10);
-			}
+			}while(!dab_events.srv_list || dab_events.srv_list_int);
 
 			if(Si468x_dab_get_ensemble_info())
 			{
@@ -899,7 +819,6 @@ void Si468x_dab_full_scan()
 	//display info about services
 	send_debug_msg("Services found: ", CRLF_NO_SEND);
 	send_debug_msg(itoa(total_services, itoa_buffer, 10), CRLF_SEND);
-
 
 	send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
 	send_debug_msg("| Number | Name             | Ensemble Name   | Frequency  | Channel | PTY | Service ID | Component ID |", CRLF_SEND);
@@ -966,10 +885,8 @@ void Si468x_dab_full_scan()
 		send_debug_msg("0x", CRLF_NO_SEND);
 		send_debug_msg(itoa(services_list[services_index].components[0].subchannel_id, itoa_buffer, 16), CRLF_NO_SEND);
 		send_debug_msg("          |", CRLF_SEND);
-
 	}
 	send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
-
 }
 
 void Si468x_dab_get_audio_info()
@@ -993,10 +910,10 @@ void Si468x_dab_get_audio_info()
 	sbr_flag = (dab_spi_rx_buffer[8] & 0x04) >> 2;
 	audio_mode = dab_spi_rx_buffer[8] & 0x03;
 
-	sig_metrics.fic_bit_cnt = dab_spi_rx_buffer[12] + (dab_spi_rx_buffer[13] << 8) + (dab_spi_rx_buffer[14] << 16) + (dab_spi_rx_buffer[15] << 24);
-	sig_metrics.fic_err_cnt = dab_spi_rx_buffer[16] + (dab_spi_rx_buffer[17] << 8) + (dab_spi_rx_buffer[18] << 16) + (dab_spi_rx_buffer[19] << 24);
+	dab_digrad_status.fic_bit_cnt = dab_spi_rx_buffer[12] + (dab_spi_rx_buffer[13] << 8) + (dab_spi_rx_buffer[14] << 16) + (dab_spi_rx_buffer[15] << 24);
+	dab_digrad_status.fic_err_cnt = dab_spi_rx_buffer[16] + (dab_spi_rx_buffer[17] << 8) + (dab_spi_rx_buffer[18] << 16) + (dab_spi_rx_buffer[19] << 24);
 
-	DisplayDabStatus(sig_metrics);
+	Display_dab_digrad_status_data(dab_digrad_status);
 
 	send_debug_msg("Bitrate: ", CRLF_NO_SEND);
 	send_debug_msg(itoa(bit_rate, itoa_buffer, 10), CRLF_SEND);
@@ -1028,29 +945,31 @@ void Si468x_dab_get_event_status()
 	HAL_Delay(1);
 	status = Si468x_read_reply(9, dab_spi_rx_buffer);
 
-	dab_events.recfg_int = (dab_spi_rx_buffer[4] & 0x80 >> 7);
-	dab_events.recfg_wrn_int = (dab_spi_rx_buffer[4] & 0x40 >> 6);
-	dab_events.audio_int = (dab_spi_rx_buffer[4] & 0x20 >> 5);
-	dab_events.anno_int = (dab_spi_rx_buffer[4] & 0x10 >> 4);
-	dab_events.oe_serv_int = (dab_spi_rx_buffer[4] & 0x08 >> 3);
-	dab_events.serv_link_int = (dab_spi_rx_buffer[4] & 0x04 >> 2);
-	dab_events.freq_info_int = (dab_spi_rx_buffer[4] & 0x02 >> 1);
-	dab_events.srv_list_int = (dab_spi_rx_buffer[4] & 0x01);
+	memcpy((uint8_t*)&dab_events, (uint8_t*)&dab_spi_rx_buffer[4], sizeof(rd_reply_t));
 
-	dab_events.audio = (dab_spi_rx_buffer[5] & 0x20 >> 5);
-	dab_events.anno = (dab_spi_rx_buffer[5] & 0x10 >> 4);
-	dab_events.oe_serv = (dab_spi_rx_buffer[5] & 0x08 >> 3);
-	dab_events.serv_link = (dab_spi_rx_buffer[5] & 0x04 >> 2);
-	dab_events.freq_info = (dab_spi_rx_buffer[5] & 0x02 >> 1);
-	dab_events.srv_list = (dab_spi_rx_buffer[5] & 0x01);
-
-	dab_events.srv_list_ver_lo = dab_spi_rx_buffer[6];
-	dab_events.srv_list_ver_hi = dab_spi_rx_buffer[7];
-
-	dab_events.mute_eng = (dab_spi_rx_buffer[8] & 0x08 >> 3);
-	dab_events.sm_eng = (dab_spi_rx_buffer[8] & 0x04 >> 2);
-	dab_events.blk_error = (dab_spi_rx_buffer[8] & 0x02 >> 1);
-	dab_events.blk_loss = (dab_spi_rx_buffer[8] & 0x01);
+//	dab_events.recfg_int = (dab_spi_rx_buffer[4] & 0x80 >> 7);
+//	dab_events.recfg_wrn_int = (dab_spi_rx_buffer[4] & 0x40 >> 6);
+//	dab_events.audio_int = (dab_spi_rx_buffer[4] & 0x20 >> 5);
+//	dab_events.anno_int = (dab_spi_rx_buffer[4] & 0x10 >> 4);
+//	dab_events.oe_serv_int = (dab_spi_rx_buffer[4] & 0x08 >> 3);
+//	dab_events.serv_link_int = (dab_spi_rx_buffer[4] & 0x04 >> 2);
+//	dab_events.freq_info_int = (dab_spi_rx_buffer[4] & 0x02 >> 1);
+//	dab_events.srv_list_int = (dab_spi_rx_buffer[4] & 0x01);
+//
+//	dab_events.audio = (dab_spi_rx_buffer[5] & 0x20 >> 5);
+//	dab_events.anno = (dab_spi_rx_buffer[5] & 0x10 >> 4);
+//	dab_events.oe_serv = (dab_spi_rx_buffer[5] & 0x08 >> 3);
+//	dab_events.serv_link = (dab_spi_rx_buffer[5] & 0x04 >> 2);
+//	dab_events.freq_info = (dab_spi_rx_buffer[5] & 0x02 >> 1);
+//	dab_events.srv_list = (dab_spi_rx_buffer[5] & 0x01);
+//
+////	dab_events.srv_list_ver_lo = dab_spi_rx_buffer[6];
+////	dab_events.srv_list_ver_hi = dab_spi_rx_buffer[7];
+//
+//	dab_events.mute_eng = (dab_spi_rx_buffer[8] & 0x08 >> 3);
+//	dab_events.sm_eng = (dab_spi_rx_buffer[8] & 0x04 >> 2);
+//	dab_events.blk_error = (dab_spi_rx_buffer[8] & 0x02 >> 1);
+//	dab_events.blk_loss = (dab_spi_rx_buffer[8] & 0x01);
 }
 
 void Si468x_dab_get_component_info(uint32_t service_id, uint8_t component_id)
@@ -1116,10 +1035,10 @@ void Si468x_dab_test_get_ber_info()	//póki co odczyt BER nie działa
 		HAL_Delay(1);
 		status = Si468x_read_reply(12, dab_spi_rx_buffer);
 
-		sig_metrics.fic_bit_cnt = dab_spi_rx_buffer[8] + (dab_spi_rx_buffer[9] << 8) + (dab_spi_rx_buffer[10] << 16) + (dab_spi_rx_buffer[11] << 24);
-		sig_metrics.fic_err_cnt = dab_spi_rx_buffer[4] + (dab_spi_rx_buffer[5] << 8) + (dab_spi_rx_buffer[6] << 16) + (dab_spi_rx_buffer[7] << 24);
+		dab_digrad_status.fic_bit_cnt = dab_spi_rx_buffer[8] + (dab_spi_rx_buffer[9] << 8) + (dab_spi_rx_buffer[10] << 16) + (dab_spi_rx_buffer[11] << 24);
+		dab_digrad_status.fic_err_cnt = dab_spi_rx_buffer[4] + (dab_spi_rx_buffer[5] << 8) + (dab_spi_rx_buffer[6] << 16) + (dab_spi_rx_buffer[7] << 24);
 
-		DisplayDabStatus(sig_metrics);
+		DisplayDabStatus(dab_digrad_status);
 }
 
 void Si468x_dab_get_time()
@@ -1128,6 +1047,13 @@ void Si468x_dab_get_time()
 	uint8_t months, days, hours, minutes, seconds;
 
 	send_debug_msg("--------------Getting time from Si468x-------------------", CRLF_SEND);
+
+	do
+	{
+		Si468x_dab_get_event_status();
+		HAL_Delay(10);
+	}while(!dab_events.srv_list || dab_events.srv_list_int);
+
 	dab_spi_tx_buffer[0] = SI468X_CMD_DAB_GET_TIME;
 	dab_spi_tx_buffer[1] = 0x00; 	//0 - local time, 1 - UTC
 

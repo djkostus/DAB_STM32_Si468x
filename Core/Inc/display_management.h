@@ -13,24 +13,13 @@
 #include "ILI9341_Driver.h"
 #include "stdlib.h"
 
-void DisplayMainScreen();
+void Display_clear_screen();
 
-void DisplayStatusReg();
+void Display_main_screen();
 
-void DisplayOK();
-void DisplayError();
+void Display_dab_digrad_status_background();
+void Display_dab_digrad_status_data(dab_digrad_status_t digrad_status);
 
-extern void ClearOK();
-
-void DisplayFirmwareDownloadStatus(uint32_t byte_cnt);
-void DisplayFirmwareTotalSize(uint32_t byte_cnt);
-
-void DisplayState(char* string);
-
-void DisplayCmdError();
-
-void DisplayBooting();
-
-void DisplayDabStatus(sig_metrics_t sig_metrics_val);
+void Display_init_screen();
 
 #endif /* INC_DISPLAY_H_ */

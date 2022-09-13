@@ -107,7 +107,8 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim11);
 
   ILI9341_Init();
-  DisplayMainScreen();
+  Display_init_screen();
+//  HAL_Delay(3000);
 
   Si468x_init();
 

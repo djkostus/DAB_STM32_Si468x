@@ -107,9 +107,9 @@ int main(void)
 
   ILI9341_Init();
   Display_init_screen();
-//  HAL_Delay(3000);
 
   Si468x_init();
+
 
     /* USER CODE END 2 */
 
@@ -117,12 +117,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  Si468x_dab_digrad_status();
+	  Si468x_dab_get_time();
+
 	  if(!HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin))
 	  {
 		  Si468x_play_next_station();
 	  }
-	  Si468x_dab_digrad_status();
-	  Si468x_dab_get_time();
+
 
 
     /* USER CODE END WHILE */

@@ -80,6 +80,7 @@ void Si468x_init()
 
 	Si468x_get_sys_state(); //kontrolnie zeby sprawdzic czy demod dziala
 
+	Display_clear_screen();
 	Display_dab_digrad_status_background();
 
 	HAL_TIM_Base_Start_IT(&htim10);	//enable this timer = enable continuously show signal info
@@ -1065,6 +1066,7 @@ void Si468x_dab_get_time()
 
 void Si468x_play_next_station()
 {
+	Display_show_next_station(services_list, actual_station, total_services);
 	send_debug_msg("---------------------------------", CRLF_SEND);
 	send_debug_msg("Playing Station ", CRLF_NO_SEND);
 	send_debug_msg(itoa(actual_station, itoa_buffer, 10), CRLF_SEND);
@@ -1082,4 +1084,5 @@ void Si468x_play_next_station()
 	{
 	  actual_station = 0;
 	}
+	Display_hide_next_station();
 }

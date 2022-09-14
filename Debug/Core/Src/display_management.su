@@ -1,6 +1,8 @@
-../Core/Src/display_management.c:13:6:Display_clear_screen	16	static
-../Core/Src/display_management.c:19:6:Display_main_screen_background	16	static
-../Core/Src/display_management.c:64:6:Display_dab_digrad_status_background	16	static
-../Core/Src/display_management.c:113:6:Display_dab_digrad_status_data	32	static
-../Core/Src/display_management.c:227:6:Display_time	24	static
-../Core/Src/display_management.c:255:6:Display_init_screen	16	static
+../Core/Src/display_management.c:15:6:Display_clear_screen	16	static
+../Core/Src/display_management.c:21:6:Display_main_screen_background	16	static
+../Core/Src/display_management.c:66:6:Display_dab_digrad_status_background	16	static
+../Core/Src/display_management.c:115:6:Display_dab_digrad_status_data	32	static
+../Core/Src/display_management.c:233:6:Display_time	24	static
+../Core/Src/display_management.c:261:6:Display_init_screen	16	static
+../Core/Src/display_management.c:274:6:Display_show_next_station	16	static
+../Core/Src/display_management.c:287:6:Display_hide_next_station	16	static

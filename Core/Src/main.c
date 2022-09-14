@@ -121,8 +121,9 @@ int main(void)
 	  {
 		  Si468x_play_next_station();
 	  }
-	  HAL_Delay(50);
 	  Si468x_dab_digrad_status();
+	  Si468x_dab_get_time();
+
 
     /* USER CODE END WHILE */
 

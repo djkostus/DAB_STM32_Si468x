@@ -4,7 +4,6 @@
 
 #define LCD_ROTATION 1
 
-static void ILI9341_SPI_Init(void);
 static void Before_Sending_Data(void);
 static void Before_Sending_Command(void);
 static void ILI9341_Send_Data(unsigned char data);

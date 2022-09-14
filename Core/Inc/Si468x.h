@@ -247,7 +247,7 @@ void Si468x_set_property(uint16_t property_id, uint16_t property_value);
 uint16_t Si468x_get_property(uint16_t property_id);
 
 void Si468x_dab_get_freq_list();
-void Si468x_dab_tune_freq(uint8_t channel);
+void Si468x_dab_tune_freq(uint8_t channel, uint16_t antcap);
 void Si468x_dab_reset_interrupts();
 void Si468x_dab_digrad_status();
 void SI468x_dab_get_digital_service_list();

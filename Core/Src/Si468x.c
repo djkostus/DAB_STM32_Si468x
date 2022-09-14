@@ -80,16 +80,15 @@ void Si468x_init()
 
 	Si468x_get_sys_state(); //kontrolnie zeby sprawdzic czy demod dziala
 
-	Display_clear_screen();
 	Display_dab_digrad_status_background();
 
 	HAL_TIM_Base_Start_IT(&htim10);	//enable this timer = enable continuously show signal info
 
 	Si468x_dab_full_scan();
 
-	Si468x_dab_tune_freq(CH_11B);
-	HAL_Delay(1000);
-	Si468x_dab_get_time();
+//	Si468x_dab_tune_freq(CH_11B, 0);
+//	HAL_Delay(1000);
+//	Si468x_dab_get_time();
 
 //	Si468x_dab_tune_freq(CH_10B); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
 
@@ -127,7 +126,7 @@ void Si468x_power_up()
 	dab_spi_tx_buffer[2]  = 0x17;					//Clock mode 1 (crystal mode), TR_SIZE = 0x7 for 19.2MHz crystal
 	dab_spi_tx_buffer[3]  = 0x50;					//start IBIAS = 800 uA (80 * 10) for 19.2MHz Crystal with 250R startup ESR
 	dab_spi_tx_buffer[4]  = 0x00;					//crystal frequency in MHz [7:0], 19.2 MHz
-	dab_spi_tx_buffer[5]  = 0xF8;	//F9??				//crystal frequency in MHz [15:8], 19.2 MHz
+	dab_spi_tx_buffer[5]  = 0xF8;	//F8 standard	//crystal frequency in MHz [15:8], 19.2 MHz
 	dab_spi_tx_buffer[6]  = 0x24;					//crystal frequency in MHz [23:16], 19.2 MHz
 	dab_spi_tx_buffer[7]  = 0x01;					//crystal frequency in MHz [31:24], 19.2 MHz
 	dab_spi_tx_buffer[8]  = 0x00;					//CTUN = 0 (there's no need to add load capacitance)
@@ -480,7 +479,7 @@ void Si468x_dab_get_freq_list()
 	}
 }
 
-void Si468x_dab_tune_freq(uint8_t channel)
+void Si468x_dab_tune_freq(uint8_t channel, uint16_t antcap)
 {
 	send_debug_msg("-------------DAB Tune to selected frequency--------------", CRLF_SEND);
 	send_debug_msg("Frequency: ", CRLF_NO_SEND);
@@ -491,8 +490,8 @@ void Si468x_dab_tune_freq(uint8_t channel)
 	dab_spi_tx_buffer[1] = 0x00;						//padding - as in documentation
 	dab_spi_tx_buffer[2] = channel;						//channel ID from table
 	dab_spi_tx_buffer[3] = 0x00;						//padding - as in documentation
-	dab_spi_tx_buffer[4] = 0x00;						//antcap [7:0]
-	dab_spi_tx_buffer[5] = 0x00;						//antcap [15:8]
+	dab_spi_tx_buffer[4] = antcap & 0xFF;				//antcap [7:0]
+	dab_spi_tx_buffer[5] = antcap >> 8;					//antcap [15:8]
 
 	status = Si468x_write_command(6, dab_spi_tx_buffer);
 	status = Si468x_read_reply(1, dab_spi_rx_buffer);
@@ -753,7 +752,7 @@ void Si468x_dab_full_scan()
 		valid_timeout = VALID_TIMEOUT;
 		fic_q_timeout = FIC_Q_TIMEOUT;
 
-		Si468x_dab_tune_freq(freq_index);
+		Si468x_dab_tune_freq(freq_index, 0);
 
 		do
 		{
@@ -998,9 +997,6 @@ void Si468x_dab_get_component_info(uint32_t service_id, uint8_t component_id)
 
 	char_abbrev = dab_spi_rx_buffer[24] + (dab_spi_rx_buffer[25] << 8);
 
-	send_debug_msg("Global ID: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(global_id, itoa_buffer, 10), CRLF_SEND);
-
 	send_debug_msg("Language: ", CRLF_NO_SEND);
 	send_debug_msg(itoa(language, itoa_buffer, 10), CRLF_SEND);
 
@@ -1008,7 +1004,7 @@ void Si468x_dab_get_component_info(uint32_t service_id, uint8_t component_id)
 	send_debug_msg((char*)label, CRLF_SEND);
 
 	send_debug_msg("Char abbrev mask: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(global_id, itoa_buffer, 2), CRLF_SEND);
+	send_debug_msg(itoa(char_abbrev, itoa_buffer, 2), CRLF_SEND);
 
 }
 
@@ -1031,37 +1027,39 @@ void Si468x_dab_test_get_ber_info()	//póki co odczyt BER nie działa
 
 void Si468x_dab_get_time()
 {
-	send_debug_msg("--------------Getting time from Si468x-------------------", CRLF_SEND);
+//	send_debug_msg("--------------Getting time from Si468x-------------------", CRLF_SEND);
 
-	do
+	//wczesniejesza metoda sprawdzania czy sygnal jest ok
+//	do
+//	{
+//		Si468x_dab_get_event_status();
+//		HAL_Delay(10);
+//	}while(!dab_events.srv_list || dab_events.srv_list_int);
+
+	if(dab_digrad_status.acq && dab_digrad_status.valid && dab_digrad_status.fic_quality > 90)
 	{
-		Si468x_dab_get_event_status();
-		HAL_Delay(10);
-	}while(!dab_events.srv_list || dab_events.srv_list_int);
+		dab_spi_tx_buffer[0] = SI468X_CMD_DAB_GET_TIME;
+		dab_spi_tx_buffer[1] = 0x00; 	//0 - local time, 1 - UTC
 
-	dab_spi_tx_buffer[0] = SI468X_CMD_DAB_GET_TIME;
-	dab_spi_tx_buffer[1] = 0x00; 	//0 - local time, 1 - UTC
+		status = Si468x_write_command(2, dab_spi_tx_buffer);
+		HAL_Delay(1);
+		status = Si468x_read_reply(11, dab_spi_rx_buffer);
 
-	status = Si468x_write_command(2, dab_spi_tx_buffer);
-	HAL_Delay(1);
-	status = Si468x_read_reply(11, dab_spi_rx_buffer);
+		memcpy((uint8_t*)&time, (uint8_t*)&dab_spi_rx_buffer[4], sizeof(time));
+		Display_time(time);
 
-	memcpy((uint8_t*)&time, (uint8_t*)&dab_spi_rx_buffer[4], sizeof(time));
-
-	Display_time(time);
-
-	send_debug_msg(itoa(time.hour, itoa_buffer, 10), CRLF_NO_SEND);
-	send_debug_msg(":", CRLF_NO_SEND);
-	send_debug_msg(itoa(time.minute, itoa_buffer, 10), CRLF_NO_SEND);
-	send_debug_msg(":", CRLF_NO_SEND);
-	send_debug_msg(itoa(time.second, itoa_buffer, 10), CRLF_SEND);
-
-	send_debug_msg(itoa(time.day, itoa_buffer, 10), CRLF_NO_SEND);
-	send_debug_msg(".", CRLF_NO_SEND);
-	send_debug_msg(itoa(time.month, itoa_buffer, 10), CRLF_NO_SEND);
-	send_debug_msg(".", CRLF_NO_SEND);
-	send_debug_msg(itoa(time.year, itoa_buffer, 10), CRLF_SEND);
-
+//		send_debug_msg(itoa(time.hour, itoa_buffer, 10), CRLF_NO_SEND);
+//		send_debug_msg(":", CRLF_NO_SEND);
+//		send_debug_msg(itoa(time.minute, itoa_buffer, 10), CRLF_NO_SEND);
+//		send_debug_msg(":", CRLF_NO_SEND);
+//		send_debug_msg(itoa(time.second, itoa_buffer, 10), CRLF_SEND);
+//
+//		send_debug_msg(itoa(time.day, itoa_buffer, 10), CRLF_NO_SEND);
+//		send_debug_msg(".", CRLF_NO_SEND);
+//		send_debug_msg(itoa(time.month, itoa_buffer, 10), CRLF_NO_SEND);
+//		send_debug_msg(".", CRLF_NO_SEND);
+//		send_debug_msg(itoa(time.year, itoa_buffer, 10), CRLF_SEND);
+	}
 }
 
 
@@ -1070,7 +1068,7 @@ void Si468x_play_next_station()
 	send_debug_msg("---------------------------------", CRLF_SEND);
 	send_debug_msg("Playing Station ", CRLF_NO_SEND);
 	send_debug_msg(itoa(actual_station, itoa_buffer, 10), CRLF_SEND);
-	Si468x_dab_tune_freq(services_list[actual_station].freq_id); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
+	Si468x_dab_tune_freq(services_list[actual_station].freq_id, 0); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
 	Si468x_dab_get_component_info(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
 	Si468x_dab_start_digital_service(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
 

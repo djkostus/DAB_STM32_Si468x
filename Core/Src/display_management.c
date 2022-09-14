@@ -8,21 +8,18 @@
 #include "display_management.h"
 #include <string.h>
 
-#define STRING_SPACING 14
-
 char char_buffer[32];
 
 void Display_clear_screen()
 {
 	ILI9341_Fill_Screen(BLACK);
-//	ILI9341_Draw_Empty_Rectangle(YELLOW, 2, 15, 318, 238); // żółta obwoluta
 	ILI9341_Draw_Line(YELLOW, 0, 17, 320, 17);
 }
 
-void Display_main_screen()
+void Display_main_screen_background()
 {
-	/* EKRAN GŁÓWNY NASZEGO URZĄDZENIA Refresh the screen to black background */
-	ILI9341_Fill_Screen(BLACK);
+	Display_clear_screen();
+
 	ILI9341_Draw_Empty_Rectangle(YELLOW, 5, 25, 315, 235); // żółta obwoluta
 	ILI9341_Draw_String(65, 5, WHITE, BLACK, "DAB+ Radio Receiver", 2); //Naglowek radia
 
@@ -66,6 +63,8 @@ void Display_main_screen()
 
 void Display_dab_digrad_status_background()
 {
+	Display_clear_screen();
+
 	ILI9341_Draw_String(5, 1, WHITE, BLACK, "DAB RECEIVE STATUS", 2); //Naglowek
 
 	//Valid Flag Background
@@ -102,7 +101,7 @@ void Display_dab_digrad_status_background()
 	//Other info background
 	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 170, 315, 190);
 	ILI9341_Draw_String(10, 173, WHITE, DARKGREY, "TRIM CAP", 2);
-	ILI9341_Draw_String(112, 173, WHITE, DARKGREY, "fF", 2);
+	ILI9341_Draw_String(125, 173, WHITE, DARKGREY, "pF", 2);
 	ILI9341_Draw_String(180, 173, WHITE, DARKGREY, "BER", 2);
 	//buttons to other menus
 	ILI9341_Draw_Filled_Rectangle(ORANGE, 5, 195, 157, 235);
@@ -113,56 +112,73 @@ void Display_dab_digrad_status_background()
 
 void Display_dab_digrad_status_data(dab_digrad_status_t digrad_status)
 {
+	uint32_t color;
+	uint32_t cap_val_ff = digrad_status.read_ant_cap * 250;
+	uint8_t cap_val_pf_int = cap_val_ff / 1000;
+	uint16_t cap_val_pf_frac = cap_val_ff % 1000;
+
 	//Valid
 	if(digrad_status.valid)
 	{
 		ILI9341_Draw_String(35, 23, GREEN, DARKGREY, "VALID", 2);
 	}
-	else
-	{
-		ILI9341_Draw_String(35, 23, RED, DARKGREY, "VALID", 2);
-	}
+	else ILI9341_Draw_String(35, 23, RED, DARKGREY, "VALID", 2);
 	//ACQ
 	if(digrad_status.acq)
 	{
 		ILI9341_Draw_String(133, 23, GREEN, DARKGREY, "ACQUIRE", 2);
 	}
-	else
-	{
-		ILI9341_Draw_String(133, 23, RED, DARKGREY, "ACQUIRE", 2);
-	}
+	else ILI9341_Draw_String(133, 23, RED, DARKGREY, "ACQUIRE", 2);
 	//FIC_ERROR
 	if(digrad_status.fic_err)
 	{
 		ILI9341_Draw_String(228, 23, RED, DARKGREY, "FIC ERROR", 2);
 	}
-	else
-	{
-		ILI9341_Draw_String(228, 23, GREEN, DARKGREY, "FIC ERROR", 2);
-	}
+	else ILI9341_Draw_String(228, 23, GREEN, DARKGREY, "FIC ERROR", 2);
+
 
 	//RSSI
+	if(digrad_status.rssi <= 13) 								color = RED;
+	if((digrad_status.rssi <= 26) && (digrad_status.rssi > 13)) color = ORANGE;
+	if((digrad_status.rssi <= 39) && (digrad_status.rssi > 26)) color = YELLOW;
+	if((digrad_status.rssi <= 52) && (digrad_status.rssi > 39)) color = GREENYELLOW;
+	if(digrad_status.rssi > 52) 								color = GREEN;
 	ILI9341_Draw_String(50, 48, WHITE, DARKGREY, "   ", 2);
 	ILI9341_Draw_String(50, 48, WHITE, DARKGREY, itoa(digrad_status.rssi, char_buffer, 10), 2);
-	ILI9341_Draw_Filled_Rectangle(GREEN, 130, 50, 130 + (digrad_status.rssi * 180)/64, 60);
+	ILI9341_Draw_Filled_Rectangle(color, 130, 50, 130 + (digrad_status.rssi * 180)/64, 60);
 	ILI9341_Draw_Filled_Rectangle(WHITE, 130 + (digrad_status.rssi * 180)/64, 50, 310, 60);
 
 	//SNR
+	if(digrad_status.snr <= 4) 									color = RED;
+	if((digrad_status.snr <= 8) && (digrad_status.snr > 4)) 	color = ORANGE;
+	if((digrad_status.snr <= 12) && (digrad_status.snr > 8)) 	color = YELLOW;
+	if((digrad_status.snr <= 16) && (digrad_status.snr > 12)) 	color = GREENYELLOW;
+	if(digrad_status.snr > 16) 									color = GREEN;
 	ILI9341_Draw_String(50, 73, WHITE, DARKGREY, "   ", 2);
 	ILI9341_Draw_String(50, 73, WHITE, DARKGREY, itoa(digrad_status.snr, char_buffer, 10), 2);
-	ILI9341_Draw_Filled_Rectangle(GREEN, 130, 75, 130 + (digrad_status.snr * 180)/20, 85);
+	ILI9341_Draw_Filled_Rectangle(color, 130, 75, 130 + (digrad_status.snr * 180)/20, 85);
 	ILI9341_Draw_Filled_Rectangle(WHITE, 130 + (digrad_status.snr * 180)/20, 75, 310, 85);
 
 	//CNR
+	if(digrad_status.cnr <= 11) 								color = RED;
+	if((digrad_status.cnr <= 22) && (digrad_status.cnr > 11)) 	color = ORANGE;
+	if((digrad_status.cnr <= 33) && (digrad_status.cnr > 22)) 	color = YELLOW;
+	if((digrad_status.cnr <= 44) && (digrad_status.cnr > 33)) 	color = GREENYELLOW;
+	if(digrad_status.cnr > 44) 									color = GREEN;
 	ILI9341_Draw_String(50, 98, WHITE, DARKGREY, "   ", 2);
 	ILI9341_Draw_String(50, 98, WHITE, DARKGREY, itoa(digrad_status.cnr, char_buffer, 10), 2);
-	ILI9341_Draw_Filled_Rectangle(GREEN, 130, 100, 130 + (digrad_status.cnr * 180)/54, 110);
+	ILI9341_Draw_Filled_Rectangle(color, 130, 100, 130 + (digrad_status.cnr * 180)/54, 110);
 	ILI9341_Draw_Filled_Rectangle(WHITE, 130 + (digrad_status.cnr * 180)/54, 100, 310, 110);
 
 	//FIC QUALITY
+	if(digrad_status.fic_quality <= 20) 										color = RED;
+	if((digrad_status.fic_quality <= 40) && (digrad_status.fic_quality > 20)) 	color = ORANGE;
+	if((digrad_status.fic_quality <= 60) && (digrad_status.fic_quality > 40)) 	color = YELLOW;
+	if((digrad_status.fic_quality <= 80) && (digrad_status.fic_quality > 60)) 	color = GREENYELLOW;
+	if(digrad_status.fic_quality > 80) 											color = GREEN;
 	ILI9341_Draw_String(75, 123, WHITE, DARKGREY, "   ", 2);
 	ILI9341_Draw_String(75, 123, WHITE, DARKGREY, itoa(digrad_status.fic_quality, char_buffer, 10), 2);
-	ILI9341_Draw_Filled_Rectangle(GREEN, 130, 125, 130 + (digrad_status.fic_quality * 180)/100, 135);
+	ILI9341_Draw_Filled_Rectangle(color, 130, 125, 130 + (digrad_status.fic_quality * 180)/100, 135);
 	ILI9341_Draw_Filled_Rectangle(WHITE, 130 + (digrad_status.fic_quality * 180)/100, 125, 310, 135);
 
 	//TUNE FREQ
@@ -175,59 +191,65 @@ void Display_dab_digrad_status_data(dab_digrad_status_t digrad_status)
 		ILI9341_Draw_String(264, 148, WHITE, DARKGREY, "0", 2);
 		ILI9341_Draw_String(273, 148, WHITE, DARKGREY, itoa(digrad_status.tune_index, char_buffer, 10), 2);
 	}
-	else
-	{
-		ILI9341_Draw_String(264, 148, WHITE, DARKGREY, itoa(digrad_status.tune_index, char_buffer, 10), 2);
-	}
+	else ILI9341_Draw_String(264, 148, WHITE, DARKGREY, itoa(digrad_status.tune_index, char_buffer, 10), 2);
 
 	//ANT CAP TRIM
-	if(digrad_status.read_ant_cap > 100)
+	if(cap_val_pf_int < 10)
 	{
-		ILI9341_Draw_String(80, 173, WHITE, DARKGREY, itoa(digrad_status.read_ant_cap, char_buffer, 10), 2);
+		ILI9341_Draw_String(79, 173, WHITE, DARKGREY, " ", 2);
+		ILI9341_Draw_String(87, 173, WHITE, DARKGREY, itoa(cap_val_pf_int, char_buffer, 10), 2);
 	}
-	if(digrad_status.read_ant_cap > 9 && digrad_status.read_ant_cap <100)
+	if(cap_val_pf_int >= 10)
 	{
-		ILI9341_Draw_String(80, 173, WHITE, DARKGREY, " ", 2);
-		ILI9341_Draw_String(88, 173, WHITE, DARKGREY, itoa(digrad_status.read_ant_cap, char_buffer, 10), 2);
+		ILI9341_Draw_String(79, 173, WHITE, DARKGREY, itoa(cap_val_pf_int, char_buffer, 10), 2);
 	}
-	if(digrad_status.read_ant_cap < 10)
+	ILI9341_Draw_String(95, 173, WHITE, DARKGREY, ".", 2);
+	switch(cap_val_pf_frac)
 	{
-		ILI9341_Draw_String(80, 173, WHITE, DARKGREY, "  ", 2);
-		ILI9341_Draw_String(96, 173, WHITE, DARKGREY, itoa(digrad_status.read_ant_cap, char_buffer, 10), 2);
+	case 250:
+		ILI9341_Draw_String(103, 173, WHITE, DARKGREY, "25", 2);
+		break;
+	case 500:
+		ILI9341_Draw_String(103, 173, WHITE, DARKGREY, "50", 2);
+		break;
+	case 750:
+		ILI9341_Draw_String(103, 173, WHITE, DARKGREY, "75", 2);
+		break;
+	default:
+		ILI9341_Draw_String(103, 173, WHITE, DARKGREY, "00", 2);
+		break;
 	}
 
 	//BER
 	ILI9341_Draw_String(215, 173, WHITE, DARKGREY, itoa((digrad_status.fic_err_cnt / digrad_status.fic_bit_cnt), char_buffer, 10), 2);
-
 }
 
 void Display_time(time_t time_val)
 {
-
+	//hour and minute
 	if(time_val.hour < 10)
 	{
-		ILI9341_Draw_String(273, 1, WHITE, BLACK, "0", 2);
-		ILI9341_Draw_String(282, 1, WHITE, BLACK, itoa(time_val.hour, char_buffer, 10), 2);
+		ILI9341_Draw_String(271, 1, WHITE, BLACK, "0", 2);
+		ILI9341_Draw_String(280, 1, WHITE, BLACK, itoa(time_val.hour, char_buffer, 10), 2);
 	}
 	else
 	{
-		ILI9341_Draw_String(273, 1, WHITE, BLACK, itoa(time_val.hour, char_buffer, 10), 2);
+		ILI9341_Draw_String(271, 1, WHITE, BLACK, itoa(time_val.hour, char_buffer, 10), 2);
 	}
 
-	ILI9341_Draw_String(288, 1, WHITE, BLACK, ":", 2);
+	ILI9341_Draw_String(287, 1, WHITE, BLACK, ":", 2);
 
 	if(time_val.minute < 10)
 	{
-		ILI9341_Draw_String(296, 1, WHITE, BLACK, "0", 2);
-		ILI9341_Draw_String(305, 1, WHITE, BLACK, itoa(time_val.minute, char_buffer, 10), 2);
+		ILI9341_Draw_String(295, 1, WHITE, BLACK, "0", 2);
+		ILI9341_Draw_String(304, 1, WHITE, BLACK, itoa(time_val.minute, char_buffer, 10), 2);
 	}
 	else
 	{
-		ILI9341_Draw_String(296, 1, WHITE, BLACK, itoa(time_val.minute, char_buffer, 10), 2);
+		ILI9341_Draw_String(295, 1, WHITE, BLACK, itoa(time_val.minute, char_buffer, 10), 2);
 	}
-
-
-
+	//date
+	//todo
 }
 
 void Display_init_screen()

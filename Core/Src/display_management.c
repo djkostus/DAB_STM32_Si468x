@@ -271,24 +271,27 @@ void Display_init_screen()
 	ILI9341_Draw_String(120, 180, WHITE, BLACK, "Booting...", 2);
 }
 
-void Display_show_next_station(dab_service_t _services_list, uint8_t _actual_station, uint8_t _total_services)
+void Display_show_next_station(dab_service_t _services_list[], uint8_t _actual_station, uint8_t _total_services)
 {
 	display_freeze = 1;
 
 	ILI9341_Draw_Filled_Rectangle(BLACK, 50, 90, 270, 150);
 	ILI9341_Draw_String(55, 95, WHITE, BLACK, "Number:", 2);
-	ILI9341_Draw_String(100, 95, WHITE, BLACK, itoa(_actual_station, char_buffer, 10), 2);
-	ILI9341_Draw_String(130, 95, WHITE, BLACK, "/", 2);
-	ILI9341_Draw_String(140, 95, WHITE, BLACK, itoa(_total_services, char_buffer, 10), 2);
+	ILI9341_Draw_String(120, 95, WHITE, BLACK, itoa(_actual_station + 1, char_buffer, 10), 2);
+	ILI9341_Draw_String(140, 95, WHITE, BLACK, "/", 2);
+	ILI9341_Draw_String(148, 95, WHITE, BLACK, itoa(_total_services, char_buffer, 10), 2);
 	ILI9341_Draw_String(55, 110, WHITE, BLACK, "Name:", 2);
-//	ILI9341_Draw_String(100, 110, WHITE, BLACK, _services_list[_actual_station].name, 2);
+	ILI9341_Draw_String(100, 110, WHITE, BLACK, _services_list[_actual_station].name, 2);
 }
 
 void Display_hide_next_station()
 {
 	display_freeze = 0;
 
-//	Display_dab_digrad_status_background();
+	ILI9341_Draw_Filled_Rectangle(BLACK, 50, 90, 270, 150);
+
+	//wyswietlanie ponownie tylko tego, co wyskakujace okno zaslonilo
+
 	//SNR Background
 	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 70, 315, 90);
 	ILI9341_Draw_String(10, 73, WHITE, DARKGREY, "SNR", 2);

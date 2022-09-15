@@ -262,6 +262,6 @@ void Si468x_dab_test_get_ber_info();
 
 void Si468x_dab_get_time();
 
-void Si468x_play_next_station();
+void Si468x_play_station(uint8_t direction);
 
 #endif /* INC_SI468X_H_ */

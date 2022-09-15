@@ -303,7 +303,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 	if(htim->Instance==TIM11)
 	{
-		Leds_Control_Blink();
+//		Leds_Control_Blink();
 
 	}
 }

@@ -4,5 +4,5 @@
 ../Core/Src/display_management.c:115:6:Display_dab_digrad_status_data	32	static
 ../Core/Src/display_management.c:233:6:Display_time	24	static
 ../Core/Src/display_management.c:261:6:Display_init_screen	16	static
-../Core/Src/display_management.c:274:6:Display_show_next_station	16	static
+../Core/Src/display_management.c:274:6:Display_show_next_station	24	static
 ../Core/Src/display_management.c:287:6:Display_hide_next_station	16	static

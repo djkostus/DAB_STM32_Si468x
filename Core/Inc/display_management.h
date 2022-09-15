@@ -24,7 +24,7 @@ void Display_time(time_t time_val);
 
 void Display_init_screen();
 
-void Display_show_next_station(dab_service_t _services_list, uint8_t _actual_station, uint8_t _total_services);
+void Display_show_next_station(dab_service_t _services_list[], uint8_t station, uint8_t _total_services);
 void Display_hide_next_station();
 
 #endif /* INC_DISPLAY_H_ */

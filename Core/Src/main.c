@@ -29,6 +29,7 @@
 /* USER CODE BEGIN Includes */
 #include "si468x.h"
 #include "debug_uart.h"
+#include "touch.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -111,7 +112,7 @@ int main(void)
   Si468x_init();
 
 
-    /* USER CODE END 2 */
+  /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -119,10 +120,11 @@ int main(void)
   {
 	  Si468x_dab_digrad_status();
 	  Si468x_dab_get_time();
+	  Touch_Read(0);
 
 	  if(!HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin))
 	  {
-		  Si468x_play_next_station();
+		  Si468x_play_station(1);
 	  }
 
 
@@ -156,7 +158,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 160;
+  RCC_OscInitStruct.PLL.PLLN = 240;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)

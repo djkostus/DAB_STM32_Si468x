@@ -1064,12 +1064,33 @@ void Si468x_dab_get_time()
 }
 
 
-void Si468x_play_next_station()
+void Si468x_play_station(uint8_t direction)
 {
+	if(direction)
+	{
+		actual_station++;
+		if(actual_station == total_services)
+		{
+		  actual_station = 0;
+		}
+	}
+	else
+	{
+		actual_station--;
+		if(actual_station < 0)
+		{
+		  actual_station = total_services;
+		}
+	}
+
+
 	Display_show_next_station(services_list, actual_station, total_services);
+
 	send_debug_msg("---------------------------------", CRLF_SEND);
 	send_debug_msg("Playing Station ", CRLF_NO_SEND);
 	send_debug_msg(itoa(actual_station, itoa_buffer, 10), CRLF_SEND);
+	send_debug_msg("Name: ", CRLF_NO_SEND);
+	send_debug_msg(itoa(services_list[actual_station].name, itoa_buffer, 10), CRLF_SEND);
 	Si468x_dab_tune_freq(services_list[actual_station].freq_id, 0); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
 	Si468x_dab_get_component_info(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
 	Si468x_dab_start_digital_service(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
@@ -1077,12 +1098,5 @@ void Si468x_play_next_station()
 	Si468x_dab_digrad_status();
 	Si468x_dab_get_audio_info();
 
-
-
-	actual_station++;
-	if(actual_station == total_services)
-	{
-	  actual_station = 0;
-	}
 	Display_hide_next_station();
 }

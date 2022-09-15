@@ -31,4 +31,4 @@
 ../Core/Src/Si468x.c:963:6:Si468x_dab_get_component_info	40	static
 ../Core/Src/Si468x.c:1013:6:Si468x_dab_test_get_ber_info	48	static
 ../Core/Src/Si468x.c:1029:6:Si468x_dab_get_time	8	static
-../Core/Src/Si468x.c:1067:6:Si468x_play_next_station	8	static
+../Core/Src/Si468x.c:1067:6:Si468x_play_station	16	static

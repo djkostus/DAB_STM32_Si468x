@@ -2,7 +2,6 @@
  * dab_defs.h
  *
  *  Created on: 9 wrz 2022
- *      Author: M.Kardaś - ATNEL
  */
 #ifndef INC_DAB_DEFS_H_
 #define INC_DAB_DEFS_H_
@@ -50,8 +49,7 @@ CH_13D,   // 235776 kHz
 CH_13E,   // 237488 kHz
 CH_13F   // 239200 kHz
 };
-
-const char* dab_channels_names[] = {
+static const char* dab_channels_names[] = {
 "CH_5A",   // 174928 kHz
 "CH_5B",   // 176640 kHz
 "CH_5C",   // 178352 kHz

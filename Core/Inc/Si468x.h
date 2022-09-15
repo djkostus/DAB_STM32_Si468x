@@ -85,7 +85,7 @@ typedef struct{
 }dab_component_t;
 
 typedef struct{
-	uint8_t name[24];
+	uint8_t name[20];
 	uint8_t pd_flag;
 	uint8_t p_ty;
 	uint32_t srv_ref;
@@ -94,7 +94,7 @@ typedef struct{
 	uint32_t freq;
 	uint8_t freq_id;
 	uint8_t number_of_components;
-	dab_component_t components[3];
+	dab_component_t components[4];
 }dab_service_t;
 
 typedef struct{
@@ -146,7 +146,7 @@ typedef struct{
 
 typedef struct{
 	uint16_t id;
-	uint8_t label[17];
+	uint8_t label[20];
 	uint32_t freq;
 	uint8_t freq_id;
 }dab_ensemble_t;
@@ -217,7 +217,7 @@ typedef struct{
 }time_t;
 
 
-void Si468x_init();
+void Si468x_dab_init();
 void Si468x_reset();
 void Si468x_disable();
 void Si468x_power_up();
@@ -262,6 +262,10 @@ void Si468x_dab_test_get_ber_info();
 
 void Si468x_dab_get_time();
 
-void Si468x_play_station(uint8_t direction);
+void play_station(uint8_t direction);
+
+void restore_from_eeprom();
+
+
 
 #endif /* INC_SI468X_H_ */

@@ -51,12 +51,12 @@ void Touch_Read(uint8_t state)
 
 		if(x_pixel_val > 5 && x_pixel_val < 157 && y_pixel_val > 195 && x_pixel_val < 235)
 		{
-			Si468x_play_station(0);
+			play_station(0);
 		}
 
 		if(x_pixel_val > 162 && x_pixel_val < 315 && y_pixel_val > 195 && x_pixel_val < 235)
 		{
-			Si468x_play_station(1);
+			play_station(1);
 		}
 	}
 }

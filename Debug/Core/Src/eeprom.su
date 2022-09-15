@@ -1,0 +1,6 @@
+../Core/Src/eeprom.c:21:6:eeprom_wait	8	static
+../Core/Src/eeprom.c:26:19:eeprom_read	40	static
+../Core/Src/eeprom.c:32:19:eeprom_write	48	static
+../Core/Src/eeprom.c:43:6:eeprom_clear_scanning_data	80	static
+../Core/Src/eeprom.c:73:6:eeprom_save_scanning_data	32	static
+../Core/Src/eeprom.c:95:6:eeprom_show	168	static

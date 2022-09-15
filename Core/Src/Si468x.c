@@ -15,6 +15,7 @@
 #include "patch_full.h"
 #include "debug_uart.h"
 #include "dab_defs.h"
+#include "eeprom.h"
 
 #include <string.h>
 
@@ -33,16 +34,17 @@ char itoa_buffer[64];								//buffer using to send debug informations by UART, 
 RETURN_CODE status = 0;								//return status during executing some commands on Si468x
 
 uint32_t freq_table[48];							//table of frequencies (channels) read from Si468x memory
+
 uint8_t freq_cnt = 0;								//quantity of frequencies in Si468x memory
 
-dab_digrad_status_t dab_digrad_status;							//struct that contains some metrics informing about signal quality and status
+dab_digrad_status_t dab_digrad_status;				//struct that contains some metrics informing about signal quality and status
 
 rd_reply_t rd_reply;								//struct that contains Si468x flags obtained during RD REPLY Command
 dab_events_t dab_events;							//struct that contains info about DAB flags obtained during DAB_GET_EVENT_STATUS command
 time_t time;										//struct that contains data & time obtained from DAB+
 
 dab_ensemble_t ensembles_list[10];					//list of ensembles found during full scan
-dab_service_t services_list[50];					//list of services found during full scan
+dab_service_t services_list[100];					//list of services found during full scan
 uint8_t total_services = 0;							//total quantity of services found during full scan
 uint8_t total_ensembles = 0;						//total quantity of ensembles found during full scan
 uint8_t actual_services = 0;						//actual quantity of services during scanning process, this variable is necessary to save stations in memory
@@ -52,9 +54,11 @@ uint8_t actual_freq_id = 0;							//frequency table index of the frequency to wh
 
 uint8_t actual_station = 0;
 
-void Si468x_init()
+uint8_t last_station_index = 0;
+
+void Si468x_dab_init()
 {
-	send_debug_msg("---------------------------------Si468x init---------------------------------", CRLF_SEND);
+	send_debug_msg("-----------------------------Si468x DAB Mode init-----------------------------", CRLF_SEND);
 	Si468x_reset();
 	Si468x_power_up();
 	Si468x_bootloader_load_host();
@@ -75,34 +79,8 @@ void Si468x_init()
 	Si468x_set_property(SI468x_PROP_DAB_ACF_MUTE_SIGLOSS_THRESHOLD, 0x05);			//próg wyciszania audio jak sygnal jest utracony, default 0x06
 	Si468x_set_property(SI468x_PROP_DAB_ACF_SOFTMUTE_BER_LIMITS, 0xE2C4); 			//limit BER kiedy soft mute zadziała. Defaultowo 0xE2A6
 	Si468x_set_property(SI468x_PROP_DIGITAL_SERVICE_INT_SOURCE, 0x01);				//Enables the DSRVPCKTINT interrupt of the GET_DIGITAL_SERVICE_DATA command
-
-	Si468x_dab_get_freq_list(); 													//odczytujemy z ukladu liste czestotliwosci do tablicy
-
+//	Si468x_dab_get_freq_list(); 													//odczytujemy z ukladu liste czestotliwosci do tablicy
 	Si468x_get_sys_state(); //kontrolnie zeby sprawdzic czy demod dziala
-
-	Display_clear_screen();
-	Display_dab_digrad_status_background();
-
-	HAL_TIM_Base_Start_IT(&htim10);	//enable this timer = enable continuously show signal info
-
-	Si468x_dab_full_scan();
-
-//	Si468x_dab_tune_freq(CH_11B, 0);
-//	HAL_Delay(1000);
-//	Si468x_dab_get_time();
-
-//	Si468x_dab_tune_freq(CH_10B); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
-
-//	for(uint8_t i = 0; i < 50; i++)
-//	{
-//		if(services_list[i].service_id == 0x3211)
-//		{
-//			Si468x_dab_tune_freq(services_list[i].freq_id); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
-//			Si468x_dab_start_digital_service(services_list[i].service_id, services_list[i].components[0].subchannel_id);
-//			break;
-//		}
-//	}
-
 }
 
 void Si468x_reset()
@@ -472,6 +450,19 @@ void Si468x_dab_get_freq_list()
 				send_debug_msg(itoa(freq_table[i], itoa_buffer, 10), CRLF_NO_SEND);
 				send_debug_msg(" kHz", CRLF_SEND);
 			}
+
+			//save to eeprom
+			send_debug_msg("Saving to EEPROM...", CRLF_SEND);
+
+			eeprom_write(FREQ_TABLE_SIZE_ADDR, &freq_cnt, sizeof(freq_cnt));
+
+			for (uint8_t i = 0; i < 3; i++)
+			{
+				eeprom_write(FREQ_TABLE_START_ADDR + PAGE_SIZE * i, &freq_table[i * PAGE_SIZE / 4], PAGE_SIZE);
+			}
+
+
+			send_debug_msg("Saved OK.", CRLF_SEND);
 		}
 		else
 		{
@@ -549,16 +540,19 @@ void Si468x_dab_digrad_status()
 	status = Si468x_write_command(2, dab_spi_tx_buffer);
 	HAL_Delay(1);
 	status = Si468x_read_reply(40, dab_spi_rx_buffer);
-	memcpy((uint8_t*)&dab_digrad_status, (uint8_t*)&dab_spi_rx_buffer[4], sizeof(dab_digrad_status));	//
-	if(dab_digrad_status.snr > 20)
+	if(rd_reply.stc_int)
 	{
-		dab_digrad_status.snr = 0; //snr powyzej 20 nie wystapi, a skrajnie duza wartosc podczas skanowania jest przeklamana
+		memcpy((uint8_t*)&dab_digrad_status, (uint8_t*)&dab_spi_rx_buffer[4], sizeof(dab_digrad_status));	//
+		if(dab_digrad_status.snr > 20)
+		{
+			dab_digrad_status.snr = 0; //snr powyzej 20 nie wystapi, a skrajnie duza wartosc podczas skanowania jest przeklamana
+		}
+		if(dab_digrad_status.cnr > 54)
+		{
+			dab_digrad_status.cnr = 0; //cnr powyzej 54 nie wystapi, a skrajnie duza wartosc podczas skanowania jest przeklamana
+		}
+		Display_dab_digrad_status_data(dab_digrad_status);
 	}
-	if(dab_digrad_status.cnr > 54)
-	{
-		dab_digrad_status.cnr = 0; //cnr powyzej 54 nie wystapi, a skrajnie duza wartosc podczas skanowania jest przeklamana
-	}
-	Display_dab_digrad_status_data(dab_digrad_status);
 }
 
 void Si468x_dab_get_digital_service_list()
@@ -797,6 +791,12 @@ void Si468x_dab_full_scan()
 		}
 	}
 
+	eeprom_clear_scanning_data();
+	if(total_services)
+	{
+		eeprom_save_scanning_data(services_list, total_services, ensembles_list, total_ensembles);
+	}
+
 	//display info about  ensembles
 	send_debug_msg("Ensembles found: ", CRLF_NO_SEND);
 	send_debug_msg(itoa(total_ensembles, itoa_buffer, 10), CRLF_SEND);
@@ -899,6 +899,11 @@ void Si468x_dab_full_scan()
 		send_debug_msg("          |", CRLF_SEND);
 	}
 	send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
+
+	//to check if everything is ok in eeprom
+	//  eeprom_show();
+
+
 }
 
 void Si468x_dab_get_audio_info()
@@ -1063,8 +1068,7 @@ void Si468x_dab_get_time()
 	}
 }
 
-
-void Si468x_play_station(uint8_t direction)
+void play_station(uint8_t direction)
 {
 	if(direction)
 	{
@@ -1083,6 +1087,10 @@ void Si468x_play_station(uint8_t direction)
 		}
 	}
 
+	last_station_index = actual_station;
+
+	eeprom_write(LAST_STATION_INDEX_ADDR, &last_station_index, sizeof(last_station_index));
+
 
 	Display_show_next_station(services_list, actual_station, total_services);
 
@@ -1099,4 +1107,188 @@ void Si468x_play_station(uint8_t direction)
 	Si468x_dab_get_audio_info();
 
 	Display_hide_next_station();
+
+
+	for (uint8_t i = 0; i < 3; i++)
+	{
+		eeprom_read(FREQ_TABLE_START_ADDR + PAGE_SIZE * i, &freq_table + i * (PAGE_SIZE / 4), PAGE_SIZE);
+		HAL_Delay(5);
+	}
+
+	//display freq table
+	send_debug_msg("Found ", CRLF_NO_SEND);
+	send_debug_msg(itoa(freq_cnt, itoa_buffer, 10), CRLF_NO_SEND);
+	send_debug_msg(" frequencies in list.", CRLF_SEND);
+	for(int i = 0; i < freq_cnt; i++)
+	{
+		send_debug_msg(itoa(i, itoa_buffer, 10), CRLF_NO_SEND);
+		send_debug_msg(": ", CRLF_NO_SEND);
+		send_debug_msg(itoa(freq_table[i], itoa_buffer, 10), CRLF_NO_SEND);
+		send_debug_msg(" kHz", CRLF_SEND);
+	}
+
+
 }
+
+void restore_from_eeprom()
+{
+	send_debug_msg("--------------Restore from EEPROM memory-------------------", CRLF_SEND);
+	eeprom_read(FREQ_TABLE_SIZE_ADDR, &freq_cnt, sizeof(freq_cnt));
+
+
+	for (uint8_t i = 0; i < 3; i++)
+	{
+		eeprom_read(FREQ_TABLE_START_ADDR + PAGE_SIZE * i, &freq_table[i * PAGE_SIZE / 4], PAGE_SIZE);
+		HAL_Delay(5);
+	}
+
+	eeprom_read(LAST_FREQUENCY_ADDR, &actual_freq, sizeof(actual_freq));
+	eeprom_read(LAST_FREQ_ID_ADDR, &actual_freq_id, sizeof(actual_freq_id));
+
+	eeprom_read(TOTAL_ENSEMBLES_ADDR, &total_ensembles, sizeof(total_ensembles));
+	eeprom_read(TOTAL_SERVICES_ADDR, &total_services, sizeof(total_services));
+
+	eeprom_read(LAST_STATION_INDEX_ADDR, &last_station_index, sizeof(last_station_index));
+	if(last_station_index == 0xFF)
+	{
+		last_station_index = 0;
+	}
+	actual_station = last_station_index;
+
+	for(uint8_t i = 0; i < total_ensembles; i++)
+	{
+		eeprom_read(ENSEMBLES_TABLE_START_ADDR + PAGE_SIZE * i, &ensembles_list[i], sizeof(dab_ensemble_t));
+	}
+
+	for(uint8_t i = 0; i < total_services; i++)
+	{
+		eeprom_read(SERVICES_TABLE_START_ADDR + PAGE_SIZE * i, &services_list[i], sizeof(dab_service_t));
+	}
+
+	//check if everything is ok
+
+	//display freq table
+	send_debug_msg("Found ", CRLF_NO_SEND);
+	send_debug_msg(itoa(freq_cnt, itoa_buffer, 10), CRLF_NO_SEND);
+	send_debug_msg(" frequencies in list.", CRLF_SEND);
+	for(int i = 0; i < freq_cnt; i++)
+	{
+		send_debug_msg(itoa(i, itoa_buffer, 10), CRLF_NO_SEND);
+		send_debug_msg(": ", CRLF_NO_SEND);
+		send_debug_msg(itoa(freq_table[i], itoa_buffer, 10), CRLF_NO_SEND);
+		send_debug_msg(" kHz", CRLF_SEND);
+	}
+
+
+
+	//display info about  ensembles
+	send_debug_msg("Ensembles found: ", CRLF_NO_SEND);
+	send_debug_msg(itoa(total_ensembles, itoa_buffer, 10), CRLF_SEND);
+
+	send_debug_msg("--------------------------------------------------", CRLF_SEND);
+	send_debug_msg("| Number", CRLF_NO_SEND);
+	send_debug_msg(" | Label          ", CRLF_NO_SEND);
+	send_debug_msg("| Frequency ", CRLF_NO_SEND);
+	send_debug_msg(" | Channel |", CRLF_SEND);
+
+	for(uint8_t ensembles_index = 0; ensembles_index < total_ensembles; ensembles_index++)
+	{
+		send_debug_msg("| ", CRLF_NO_SEND);
+		send_debug_msg(itoa(ensembles_index, itoa_buffer, 10), CRLF_NO_SEND);
+		send_debug_msg("      | ", CRLF_NO_SEND);
+
+		send_debug_msg(ensembles_list[ensembles_index].label, CRLF_NO_SEND);
+		send_debug_msg("| ", CRLF_NO_SEND);
+
+		send_debug_msg(itoa(ensembles_list[ensembles_index].freq, itoa_buffer, 10), CRLF_NO_SEND);
+		send_debug_msg(" kHz | ", CRLF_NO_SEND);
+
+		send_debug_msg(dab_channels_names[ensembles_list[ensembles_index].freq_id], CRLF_NO_SEND);
+		if(ensembles_list[ensembles_index].freq_id < 20)
+		{
+			send_debug_msg(" ", CRLF_NO_SEND);
+		}
+		send_debug_msg("  |", CRLF_SEND);
+	}
+	send_debug_msg("--------------------------------------------------", CRLF_SEND);
+
+	//display info about services
+	send_debug_msg("Services found: ", CRLF_NO_SEND);
+	send_debug_msg(itoa(total_services, itoa_buffer, 10), CRLF_SEND);
+
+	send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
+	send_debug_msg("| Number | Name             | Ensemble Name   | Frequency  | Channel | PTY | Service ID | Component ID |", CRLF_SEND);
+
+	for(uint8_t services_index = 0; services_index < total_services; services_index++)
+	{
+		//Number
+		send_debug_msg("| ", CRLF_NO_SEND);
+		send_debug_msg(itoa(services_index, itoa_buffer, 10), CRLF_NO_SEND);
+		if(services_index < 10)
+		{
+			send_debug_msg(" ", CRLF_NO_SEND);
+		}
+		send_debug_msg("     | ", CRLF_NO_SEND);
+
+		//Name
+		if(services_list[services_index].name[0])
+		{
+			send_debug_msg(services_list[services_index].name, CRLF_NO_SEND);
+		}
+		else
+		{
+			send_debug_msg("Unknown name    ", CRLF_NO_SEND);
+		}
+		send_debug_msg(" | ", CRLF_NO_SEND);
+
+		//Ensemble Name
+		for(uint8_t i = 0; i < total_ensembles; i++)
+		{
+			if(ensembles_list[i].freq_id == services_list[services_index].freq_id)
+			{
+				send_debug_msg(ensembles_list[i].label, CRLF_NO_SEND);
+				break;
+			}
+		}
+		send_debug_msg(" | ", CRLF_NO_SEND);
+
+		//Frequency
+		send_debug_msg(itoa(services_list[services_index].freq, itoa_buffer, 10), CRLF_NO_SEND);
+		send_debug_msg(" kHz | ", CRLF_NO_SEND);
+
+		//Channel
+		send_debug_msg(dab_channels_names[services_list[services_index].freq_id], CRLF_NO_SEND);
+		if(services_list[services_index].freq_id < 20)
+		{
+			send_debug_msg(" ", CRLF_NO_SEND);
+		}
+		send_debug_msg("  | ", CRLF_NO_SEND);
+
+		//PTY
+		send_debug_msg(itoa(services_list[services_index].p_ty, itoa_buffer, 10), CRLF_NO_SEND);
+		if(services_list[services_index].p_ty < 10)
+		{
+			send_debug_msg(" ", CRLF_NO_SEND);
+		}
+		send_debug_msg("  | ", CRLF_NO_SEND);
+
+		//Service ID
+		send_debug_msg("0x", CRLF_NO_SEND);
+		send_debug_msg(itoa(services_list[services_index].service_id, itoa_buffer, 16), CRLF_NO_SEND);
+		send_debug_msg("     | ", CRLF_NO_SEND);
+
+		//Component ID
+		send_debug_msg("0x", CRLF_NO_SEND);
+		send_debug_msg(itoa(services_list[services_index].components[0].subchannel_id, itoa_buffer, 16), CRLF_NO_SEND);
+		send_debug_msg("          |", CRLF_SEND);
+	}
+	send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
+
+
+
+	Si468x_dab_tune_freq(services_list[actual_station].freq_id, 0);
+	Si468x_dab_start_digital_service(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
+
+}
+
+

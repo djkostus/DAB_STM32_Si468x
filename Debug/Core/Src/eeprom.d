@@ -1,8 +1,4 @@
-Core/Src/Si468x.o: ../Core/Src/Si468x.c ../Core/Inc/main.h \
- ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
- ../Core/Inc/stm32f4xx_hal_conf.h \
- ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h \
- ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h \
+Core/Src/eeprom.o: ../Core/Src/eeprom.c ../Core/Inc/eeprom.h \
  ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h \
  ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h \
  ../Drivers/CMSIS/Include/core_cm4.h \
@@ -11,6 +7,10 @@ Core/Src/Si468x.o: ../Core/Src/Si468x.c ../Core/Inc/main.h \
  ../Drivers/CMSIS/Include/cmsis_gcc.h \
  ../Drivers/CMSIS/Include/mpu_armv7.h \
  ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h \
+ ../Core/Inc/stm32f4xx_hal_conf.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h \
+ ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h \
@@ -30,15 +30,9 @@ Core/Src/Si468x.o: ../Core/Src/Si468x.c ../Core/Inc/main.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
- ../Core/Inc/spi.h ../Core/Inc/main.h ../Core/Inc/i2c.h ../Core/Inc/tim.h \
- ../Core/Inc/Si468x.h ../Core/Inc/Si468x_defs.h ../Core/Inc/patch_mini.h \
- ../Core/Inc/patch_full.h ../Core/Inc/debug_uart.h ../Core/Inc/dab_defs.h \
- ../Core/Inc/eeprom.h ../Core/Inc/eeprom_addresses.h ../Core/Inc/Si468x.h
-../Core/Inc/main.h:
-../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
-../Core/Inc/stm32f4xx_hal_conf.h:
-../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h:
-../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h:
+ ../Core/Inc/eeprom_addresses.h ../Core/Inc/Si468x.h ../Core/Inc/i2c.h \
+ ../Core/Inc/main.h ../Core/Inc/debug_uart.h ../Core/Inc/dab_defs.h
+../Core/Inc/eeprom.h:
 ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h:
 ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f407xx.h:
 ../Drivers/CMSIS/Include/core_cm4.h:
@@ -47,6 +41,10 @@ Core/Src/Si468x.o: ../Core/Src/Si468x.c ../Core/Inc/main.h \
 ../Drivers/CMSIS/Include/cmsis_gcc.h:
 ../Drivers/CMSIS/Include/mpu_armv7.h:
 ../Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
+../Core/Inc/stm32f4xx_hal_conf.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc.h:
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_def.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy/stm32_hal_legacy.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_rcc_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_gpio.h:
@@ -66,16 +64,9 @@ Core/Src/Si468x.o: ../Core/Src/Si468x.c ../Core/Inc/main.h \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:
-../Core/Inc/spi.h:
-../Core/Inc/main.h:
-../Core/Inc/i2c.h:
-../Core/Inc/tim.h:
-../Core/Inc/Si468x.h:
-../Core/Inc/Si468x_defs.h:
-../Core/Inc/patch_mini.h:
-../Core/Inc/patch_full.h:
-../Core/Inc/debug_uart.h:
-../Core/Inc/dab_defs.h:
-../Core/Inc/eeprom.h:
 ../Core/Inc/eeprom_addresses.h:
 ../Core/Inc/Si468x.h:
+../Core/Inc/i2c.h:
+../Core/Inc/main.h:
+../Core/Inc/debug_uart.h:
+../Core/Inc/dab_defs.h:

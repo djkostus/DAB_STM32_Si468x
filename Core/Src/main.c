@@ -30,6 +30,8 @@
 #include "si468x.h"
 #include "debug_uart.h"
 #include "touch.h"
+#include "state_machine.h"
+#include "eeprom.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -109,7 +111,14 @@ int main(void)
   ILI9341_Init();
   Display_init_screen();
 
-  Si468x_init();
+  Si468x_dab_init();
+
+  Display_clear_screen();
+  Display_dab_digrad_status_background();
+
+  restore_from_eeprom();
+
+
 
 
   /* USER CODE END 2 */
@@ -118,15 +127,16 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
 	  Si468x_dab_digrad_status();
 	  Si468x_dab_get_time();
 	  Touch_Read(0);
 
 	  if(!HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin))
 	  {
-		  Si468x_play_station(1);
-	  }
+		  Si468x_dab_full_scan();
 
+	  }
 
 
     /* USER CODE END WHILE */
@@ -158,7 +168,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 240;
+  RCC_OscInitStruct.PLL.PLLN = 168;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)

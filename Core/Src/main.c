@@ -125,8 +125,6 @@ int main(void)
   Display_settings_screen();
 
 
-
-
   /* USER CODE END 2 */
 
   /* Infinite loop */

@@ -12,6 +12,12 @@
 #define TP_PRES_DOWN 0x80
 #define TP_CATH_PRES 0x40
 
+typedef struct{
+	uint16_t x;
+	uint16_t y;
+}touch_coordinates_t;
+
+
 typedef struct
 {
 	uint8_t (*init)(void);
@@ -56,7 +62,7 @@ extern _m_tp_dev tp_dev;
 #define T_CS_OFF	HAL_GPIO_WritePin(TOUCH_CS_GPIO_Port, TOUCH_CS_Pin, GPIO_PIN_RESET)
 
 //---FUNCTIONS---------------------------------------------------------------------------------------------
-void Touch_Read(uint8_t state);
+touch_coordinates_t Touch_read();
 void TP_Write_Byte(uint8_t num);
 uint16_t TP_Read_AD(uint8_t CMD);
 uint16_t TP_Read_XOY(uint8_t xy);

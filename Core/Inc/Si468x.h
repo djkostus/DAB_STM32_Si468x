@@ -266,6 +266,6 @@ void play_station(uint8_t direction);
 
 void restore_from_eeprom();
 
-
+dab_digrad_status_t get_digrad_status();
 
 #endif /* INC_SI468X_H_ */

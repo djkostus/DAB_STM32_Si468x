@@ -551,7 +551,7 @@ void Si468x_dab_digrad_status()
 		{
 			dab_digrad_status.cnr = 0; //cnr powyzej 54 nie wystapi, a skrajnie duza wartosc podczas skanowania jest przeklamana
 		}
-		Display_dab_digrad_status_data(dab_digrad_status);
+//		Display_dab_digrad_status_data(dab_digrad_status);
 	}
 }
 
@@ -931,7 +931,7 @@ void Si468x_dab_get_audio_info()
 	dab_digrad_status.fic_bit_cnt = dab_spi_rx_buffer[12] + (dab_spi_rx_buffer[13] << 8) + (dab_spi_rx_buffer[14] << 16) + (dab_spi_rx_buffer[15] << 24);
 	dab_digrad_status.fic_err_cnt = dab_spi_rx_buffer[16] + (dab_spi_rx_buffer[17] << 8) + (dab_spi_rx_buffer[18] << 16) + (dab_spi_rx_buffer[19] << 24);
 
-	Display_dab_digrad_status_data(dab_digrad_status);
+//	Display_dab_digrad_status_data(dab_digrad_status);
 
 	send_debug_msg("Bitrate: ", CRLF_NO_SEND);
 	send_debug_msg(itoa(bit_rate, itoa_buffer, 10), CRLF_SEND);
@@ -1097,8 +1097,6 @@ void play_station(uint8_t direction)
 
 		eeprom_write(LAST_STATION_INDEX_ADDR, &last_station_index, sizeof(last_station_index));
 
-
-		Display_show_station(services_list, actual_station, total_services);
 		send_debug_msg("---------------------------------", CRLF_SEND);
 		send_debug_msg("Playing Station ", CRLF_NO_SEND);
 		send_debug_msg(itoa(actual_station + 1, itoa_buffer, 10), CRLF_SEND);
@@ -1111,14 +1109,9 @@ void play_station(uint8_t direction)
 		Si468x_dab_digrad_status();
 		Si468x_dab_get_audio_info();
 
-		Display_hide_station();
+
 	}
-	else
-	{
-		Display_show_empty_station();
-		HAL_Delay(3000);
-		Display_hide_station();
-	}
+
 }
 
 void restore_from_eeprom()
@@ -1304,4 +1297,9 @@ void restore_from_eeprom()
 	}
 }
 
+
+dab_digrad_status_t get_digrad_status()
+{
+	return dab_digrad_status;
+}
 

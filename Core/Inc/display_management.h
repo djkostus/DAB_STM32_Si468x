@@ -29,7 +29,8 @@ void Display_scanning_screen_data();
 void Display_dab_digrad_status_background();
 void Display_dab_digrad_status_data(dab_digrad_status_t digrad_status);
 
-void Display_settings_screen();
+void Display_settings_screen_background();
+void Display_settings_screen_data();
 
 void Display_time(time_t time_val);
 

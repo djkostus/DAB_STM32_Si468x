@@ -67,8 +67,8 @@ void Display_main_screen_background()
 	//buttons to other menus
 	ILI9341_Draw_Filled_Rectangle(ORANGE, 5, 195, 157, 235);
 	ILI9341_Draw_Filled_Rectangle(ORANGE, 163, 195, 315, 235);
-	ILI9341_Draw_String(60, 207, WHITE, ORANGE, "MENU L", 2);
-	ILI9341_Draw_String(217, 207, WHITE, ORANGE, "MENU R", 2);
+	ILI9341_Draw_String(50, 207, WHITE, ORANGE, "SETTINGS", 2);
+	ILI9341_Draw_String(197, 207, WHITE, ORANGE, "SIGNAL INFO", 2);
 }
 
 void Display_main_screen_data()
@@ -106,7 +106,7 @@ void Display_station_list_background()
 {
 	Display_clear_screen();
 
-	ILI9341_Draw_String(5, 1, WHITE, BLACK, "DAB STATION LIST", 2); //Naglowek
+	ILI9341_Draw_String(5, 1, WHITE, BLACK, "DAB SERVICE LIST", 2); //Naglowek
 
 	//Station 1 background
 	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 20, 285, 40);
@@ -135,8 +135,8 @@ void Display_station_list_background()
 	//buttons to other menus
 	ILI9341_Draw_Filled_Rectangle(ORANGE, 5, 195, 157, 235);
 	ILI9341_Draw_Filled_Rectangle(ORANGE, 163, 195, 315, 235);
-	ILI9341_Draw_String(60, 207, WHITE, ORANGE, "MENU L", 2);
-	ILI9341_Draw_String(217, 207, WHITE, ORANGE, "MENU R", 2);
+	ILI9341_Draw_String(35, 207, WHITE, ORANGE, "SIGNAL INFO", 2);
+	ILI9341_Draw_String(208, 207, WHITE, ORANGE, "SETTINGS", 2);
 
 }
 
@@ -180,18 +180,29 @@ void Display_scanning_screen_background()
 
 	//Scanning status bar background
 	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 45, 315, 65);
+
 	//Found ensembles background
 	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 70, 315, 90);
+	ILI9341_Draw_String(10, 73, WHITE, DARKGREY, "Ensembles found:", 2);
+
 	//Found stations background
 	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 95, 315, 115);
-	//Actual ID & Freq Value
+	ILI9341_Draw_String(10, 98, WHITE, DARKGREY, "Services found:", 2);
+
+	//Actual freq ID
 	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 120, 315, 140);
+	ILI9341_Draw_String(10, 123, WHITE, DARKGREY, "Frequency ID:", 2);
 
-	//Bar 1
+	//Freq value
 	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 145, 315, 165);
+	ILI9341_Draw_String(10, 148, WHITE, DARKGREY, "Frequency:", 2);
+	ILI9341_Draw_String(120, 148, WHITE, DARKGREY, ".", 2);
+	ILI9341_Draw_String(158, 148, WHITE, DARKGREY, "MHz", 2);
 
-	//Bar 2
+
+	//channel name
 	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 170, 315, 190);
+	ILI9341_Draw_String(10, 173, WHITE, DARKGREY, "Channel:", 2);
 
 	//Cancel Button
 	ILI9341_Draw_Filled_Rectangle(ORANGE, 5, 195, 315, 235);
@@ -201,12 +212,34 @@ void Display_scanning_screen_background()
 
 void Display_scanning_screen_data()
 {
+	//Scanning status bar
+	ILI9341_Draw_Filled_Rectangle(WHITE, 10, 50, 310, 60);
+
+
+	//Found ensembles background
+	ILI9341_Draw_String(145, 73, WHITE, DARKGREY, "0", 2);
+
+	//Found stations background
+	ILI9341_Draw_String(135, 98, WHITE, DARKGREY, "0", 2);
+
+	//Actual freq ID
+	ILI9341_Draw_String(118, 123, WHITE, DARKGREY, "11", 2);
+	ILI9341_Draw_String(137, 123, WHITE, DARKGREY, "/", 2);
+	ILI9341_Draw_String(147, 123, WHITE, DARKGREY, "40", 2);
+
+	//Freq value
+	ILI9341_Draw_String(95, 148, WHITE, DARKGREY, "190", 2);
+	ILI9341_Draw_String(129, 148, WHITE, DARKGREY, "250", 2);
+
+	//channel name
+	ILI9341_Draw_String(80, 173, WHITE, DARKGREY, "11B", 2);
+
 
 }
 
 void Display_dab_digrad_status_background()
 {
-//	Display_clear_screen();
+	Display_clear_screen();
 
 	ILI9341_Draw_String(5, 1, WHITE, BLACK, "DAB RECEIVE STATUS", 2); //Naglowek
 
@@ -249,8 +282,8 @@ void Display_dab_digrad_status_background()
 	//buttons to other menus
 	ILI9341_Draw_Filled_Rectangle(ORANGE, 5, 195, 157, 235);
 	ILI9341_Draw_Filled_Rectangle(ORANGE, 163, 195, 315, 235);
-	ILI9341_Draw_String(60, 207, WHITE, ORANGE, "MENU L", 2);
-	ILI9341_Draw_String(217, 207, WHITE, ORANGE, "MENU R", 2);
+	ILI9341_Draw_String(37, 207, WHITE, ORANGE, "MAIN SCREEN", 2);
+	ILI9341_Draw_String(192, 207, WHITE, ORANGE, "SERVICE LIST", 2);
 }
 
 void Display_dab_digrad_status_data(dab_digrad_status_t digrad_status)
@@ -371,51 +404,57 @@ void Display_dab_digrad_status_data(dab_digrad_status_t digrad_status)
 	}
 }
 
-void Display_settings_screen()
+void Display_settings_screen_background()
 {
 	Display_clear_screen();
 
 	ILI9341_Draw_String(5, 1, WHITE, BLACK, "SYSTEM SETTINGS", 2); //Naglowek
 
+	//actual vol & backlight background
+	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 20, 315, 55);
+	ILI9341_Draw_String(55, 22, WHITE, DARKGREY, "VOLUME", 2);
+	ILI9341_Draw_String(206, 22, WHITE, DARKGREY, "BACKLIGHT", 2);
+
 	//Volume UP/DOWN buttons
-	ILI9341_Draw_Filled_Rectangle(ORANGE, 5, 20, 157, 60);
-	ILI9341_Draw_Filled_Rectangle(ORANGE, 163, 20, 315, 60);
-	ILI9341_Draw_String(54, 32, WHITE, ORANGE, "VOLUME +", 2);
-	ILI9341_Draw_String(211, 32, WHITE, ORANGE, "VOLUME -", 2);
+	ILI9341_Draw_Filled_Rectangle(ORANGE, 5, 60, 157, 100);
+	ILI9341_Draw_Filled_Rectangle(ORANGE, 163, 60, 315, 100);
+	ILI9341_Draw_String(54, 72, WHITE, ORANGE, "VOLUME -", 2);
+	ILI9341_Draw_String(211, 72, WHITE, ORANGE, "VOLUME +", 2);
 
-	//SCAN & BACKLIGHT buttons
-	ILI9341_Draw_Filled_Rectangle(ORANGE, 5, 65, 157, 105);
-	ILI9341_Draw_Filled_Rectangle(ORANGE, 163, 65, 315, 105);
-	ILI9341_Draw_String(34, 32, WHITE, ORANGE, "SCAN DAB BAND", 2);
-	ILI9341_Draw_String(206, 32, WHITE, ORANGE, "BACKLIGHT", 2);
+	//BACKLIGHT +/- buttons
+	ILI9341_Draw_Filled_Rectangle(ORANGE, 5, 105, 157, 145);
+	ILI9341_Draw_Filled_Rectangle(ORANGE, 163, 105, 315, 145);
+	ILI9341_Draw_String(35, 117, WHITE, ORANGE, "BACKLIGHT -", 2);
+	ILI9341_Draw_String(193, 117, WHITE, ORANGE, "BACKLIGHT +", 2);
 
-
-	//Station 5 background
-	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 120, 285, 140);
-	//Station 6 background
-	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 145, 285, 165);
-	//Station 7 background
-	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 170, 285, 190);
-
-//	//up button
-//	ILI9341_Draw_Filled_Rectangle(ORANGE, 290, 20, 315, 102);
-//	ILI9341_Draw_String(295, 56, WHITE, ORANGE, "/", 2);
-//	ILI9341_Draw_String(302, 56, WHITE, ORANGE, "\\", 2);
-//	//down button
-//	ILI9341_Draw_Filled_Rectangle(ORANGE, 290, 108, 315, 190);
-//	ILI9341_Draw_String(295, 146, WHITE, ORANGE, "\\", 2);
-//	ILI9341_Draw_String(302, 146, WHITE, ORANGE, "/", 2);
+	//scan & touch calibrate buttons
+	ILI9341_Draw_Filled_Rectangle(ORANGE, 5, 150, 157, 190);
+	ILI9341_Draw_Filled_Rectangle(ORANGE, 163, 150, 315, 190);
+	ILI9341_Draw_String(32, 162, WHITE, ORANGE, "SCAN DAB BAND", 2);
+	ILI9341_Draw_String(168, 162, WHITE, ORANGE, "TOUCH CALIBRATION", 2);
 
 	//buttons to other menus
 	ILI9341_Draw_Filled_Rectangle(ORANGE, 5, 195, 157, 235);
 	ILI9341_Draw_Filled_Rectangle(ORANGE, 163, 195, 315, 235);
-	ILI9341_Draw_String(60, 207, WHITE, ORANGE, "MENU L", 2);
-	ILI9341_Draw_String(217, 207, WHITE, ORANGE, "MENU R", 2);
-
+	ILI9341_Draw_String(35, 207, WHITE, ORANGE, "SERVICE LIST", 2);
+	ILI9341_Draw_String(195, 207, WHITE, ORANGE, "MAIN SCREEN", 2);
 
 }
 
+void Display_settings_screen_data()
+{
 
+	//volume bar
+	ILI9341_Draw_Filled_Rectangle(WHITE, 12, 40, 152, 50);
+
+	//backlight bar
+	ILI9341_Draw_Filled_Rectangle(WHITE, 168, 40, 308, 50);
+
+//	ILI9341_Draw_Filled_Rectangle(color, 130, 125, 130 + (digrad_status.fic_quality * 180)/100, 135);
+//	ILI9341_Draw_Filled_Rectangle(WHITE, 130 + (digrad_status.fic_quality * 180)/100, 125, 310, 135);
+//	ILI9341_Draw_Filled_Rectangle(WHITE, );
+
+}
 
 void Display_time(time_t time_val)
 {

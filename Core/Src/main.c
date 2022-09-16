@@ -112,17 +112,7 @@ int main(void)
   Display_booting_screen();
 
   Si468x_dab_init();
-
-  Display_clear_screen();
-  Display_dab_digrad_status_background();
-
   restore_from_eeprom();
-
-//  Display_station_list_background();
-//  Display_stations_list_data(6);
-
-
-  Display_settings_screen();
 
 
   /* USER CODE END 2 */
@@ -131,17 +121,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-//	  Si468x_dab_digrad_status();
-	  Si468x_dab_get_time();
-	  Touch_Read(0);
-
-	  if(!HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin))
-	  {
-		  Si468x_dab_full_scan();
-
-	  }
-
+	  state_machine();
 
     /* USER CODE END WHILE */
 

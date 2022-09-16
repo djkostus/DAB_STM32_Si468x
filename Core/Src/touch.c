@@ -26,13 +26,12 @@ uint8_t CMD_RDX = 0XD0;
 uint8_t CMD_RDY = 0X90;
 
 uint16_t xtemp, ytemp;
-uint16_t x_pixel_val, y_pixel_val;
-//uint8_t state=0;
+//uint16_t x_pixel_val, y_pixel_val;
 
-char touch_itoa_buffer[64];
-
-void Touch_Read(uint8_t state)
+touch_coordinates_t Touch_read()
 {
+	touch_coordinates_t touch_coordinates;
+
 	tp_dev.scan(0);
 
 	if(tp_dev.sta & TP_PRES_DOWN)
@@ -40,25 +39,18 @@ void Touch_Read(uint8_t state)
 		xtemp = TP_Read_XOY(0xD0);
 		ytemp = TP_Read_XOY(0x90);
 
-		x_pixel_val = 320 - 320 * (ytemp - 350) / (3900-350);
+		touch_coordinates.x = 320 - 320 * (ytemp - 350) / (3900-350);
+		touch_coordinates.y = 240 - 230 * (xtemp - 240) / (3800-230);
 
-		y_pixel_val = 240 - 230 * (xtemp - 240) / (3800-230);
-
-//		send_debug_msg("x: ", CRLF_NO_SEND);
-//		send_debug_msg(itoa(x_pixel_val, touch_itoa_buffer, 10), CRLF_NO_SEND);
-//		send_debug_msg(", y: ", CRLF_NO_SEND);
-//		send_debug_msg(itoa(y_pixel_val, touch_itoa_buffer, 10), CRLF_SEND);
-
-		if(x_pixel_val > 5 && x_pixel_val < 157 && y_pixel_val > 195 && x_pixel_val < 235)
-		{
-			play_station(1);
-		}
-
-		if(x_pixel_val > 162 && x_pixel_val < 315 && y_pixel_val > 195 && x_pixel_val < 235)
-		{
-			play_station(2);
-		}
 	}
+
+	else
+	{
+		touch_coordinates.x = 0;
+		touch_coordinates.y = 0;
+	}
+
+	return touch_coordinates;
 }
 
 /*****************************************************************************

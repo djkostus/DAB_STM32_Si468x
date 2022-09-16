@@ -792,6 +792,7 @@ void Si468x_dab_full_scan()
 	}
 
 	eeprom_clear_scanning_data();
+
 	if(total_services)
 	{
 		eeprom_save_scanning_data(services_list, total_services, ensembles_list, total_ensembles);
@@ -1070,104 +1071,68 @@ void Si468x_dab_get_time()
 
 void play_station(uint8_t direction)
 {
-	if(direction)
+	if(total_ensembles && total_services)
 	{
-		actual_station++;
-		if(actual_station == total_services)
+		switch(direction)
 		{
-		  actual_station = 0;
+			case 2:
+				actual_station++;
+				if(actual_station == total_services)
+				{
+				  actual_station = 0;
+				}
+				break;
+			case 1:
+				actual_station--;
+				if(actual_station < 0 || actual_station > total_services)
+				{
+				  actual_station = total_services - 1;
+				}
+				break;
+			default:
+				break;
 		}
+
+		last_station_index = actual_station;
+
+		eeprom_write(LAST_STATION_INDEX_ADDR, &last_station_index, sizeof(last_station_index));
+
+
+		Display_show_station(services_list, actual_station, total_services);
+		send_debug_msg("---------------------------------", CRLF_SEND);
+		send_debug_msg("Playing Station ", CRLF_NO_SEND);
+		send_debug_msg(itoa(actual_station + 1, itoa_buffer, 10), CRLF_SEND);
+		send_debug_msg("Name: ", CRLF_NO_SEND);
+		send_debug_msg(services_list[actual_station].name, CRLF_SEND);
+		Si468x_dab_tune_freq(services_list[actual_station].freq_id, 0); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
+		Si468x_dab_get_component_info(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
+		Si468x_dab_start_digital_service(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
+
+		Si468x_dab_digrad_status();
+		Si468x_dab_get_audio_info();
+
+		Display_hide_station();
 	}
 	else
 	{
-		actual_station--;
-		if(actual_station < 0)
-		{
-		  actual_station = total_services;
-		}
+		Display_show_empty_station();
+		HAL_Delay(3000);
+		Display_hide_station();
 	}
-
-	last_station_index = actual_station;
-
-	eeprom_write(LAST_STATION_INDEX_ADDR, &last_station_index, sizeof(last_station_index));
-
-
-	Display_show_next_station(services_list, actual_station, total_services);
-
-	send_debug_msg("---------------------------------", CRLF_SEND);
-	send_debug_msg("Playing Station ", CRLF_NO_SEND);
-	send_debug_msg(itoa(actual_station, itoa_buffer, 10), CRLF_SEND);
-	send_debug_msg("Name: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(services_list[actual_station].name, itoa_buffer, 10), CRLF_SEND);
-	Si468x_dab_tune_freq(services_list[actual_station].freq_id, 0); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
-	Si468x_dab_get_component_info(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
-	Si468x_dab_start_digital_service(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
-
-	Si468x_dab_digrad_status();
-	Si468x_dab_get_audio_info();
-
-	Display_hide_next_station();
-
-
-	for (uint8_t i = 0; i < 3; i++)
-	{
-		eeprom_read(FREQ_TABLE_START_ADDR + PAGE_SIZE * i, &freq_table + i * (PAGE_SIZE / 4), PAGE_SIZE);
-		HAL_Delay(5);
-	}
-
-	//display freq table
-	send_debug_msg("Found ", CRLF_NO_SEND);
-	send_debug_msg(itoa(freq_cnt, itoa_buffer, 10), CRLF_NO_SEND);
-	send_debug_msg(" frequencies in list.", CRLF_SEND);
-	for(int i = 0; i < freq_cnt; i++)
-	{
-		send_debug_msg(itoa(i, itoa_buffer, 10), CRLF_NO_SEND);
-		send_debug_msg(": ", CRLF_NO_SEND);
-		send_debug_msg(itoa(freq_table[i], itoa_buffer, 10), CRLF_NO_SEND);
-		send_debug_msg(" kHz", CRLF_SEND);
-	}
-
-
 }
 
 void restore_from_eeprom()
 {
 	send_debug_msg("--------------Restore from EEPROM memory-------------------", CRLF_SEND);
+
+	//restore frequency table
 	eeprom_read(FREQ_TABLE_SIZE_ADDR, &freq_cnt, sizeof(freq_cnt));
-
-
 	for (uint8_t i = 0; i < 3; i++)
 	{
 		eeprom_read(FREQ_TABLE_START_ADDR + PAGE_SIZE * i, &freq_table[i * PAGE_SIZE / 4], PAGE_SIZE);
 		HAL_Delay(5);
 	}
-
-	eeprom_read(LAST_FREQUENCY_ADDR, &actual_freq, sizeof(actual_freq));
-	eeprom_read(LAST_FREQ_ID_ADDR, &actual_freq_id, sizeof(actual_freq_id));
-
-	eeprom_read(TOTAL_ENSEMBLES_ADDR, &total_ensembles, sizeof(total_ensembles));
-	eeprom_read(TOTAL_SERVICES_ADDR, &total_services, sizeof(total_services));
-
-	eeprom_read(LAST_STATION_INDEX_ADDR, &last_station_index, sizeof(last_station_index));
-	if(last_station_index == 0xFF)
-	{
-		last_station_index = 0;
-	}
-	actual_station = last_station_index;
-
-	for(uint8_t i = 0; i < total_ensembles; i++)
-	{
-		eeprom_read(ENSEMBLES_TABLE_START_ADDR + PAGE_SIZE * i, &ensembles_list[i], sizeof(dab_ensemble_t));
-	}
-
-	for(uint8_t i = 0; i < total_services; i++)
-	{
-		eeprom_read(SERVICES_TABLE_START_ADDR + PAGE_SIZE * i, &services_list[i], sizeof(dab_service_t));
-	}
-
-	//check if everything is ok
-
-	//display freq table
+	//display freq table - check if everything is ok
 	send_debug_msg("Found ", CRLF_NO_SEND);
 	send_debug_msg(itoa(freq_cnt, itoa_buffer, 10), CRLF_NO_SEND);
 	send_debug_msg(" frequencies in list.", CRLF_SEND);
@@ -1179,116 +1144,164 @@ void restore_from_eeprom()
 		send_debug_msg(" kHz", CRLF_SEND);
 	}
 
+	//restore scanning data
+	eeprom_read(TOTAL_ENSEMBLES_ADDR, &total_ensembles, sizeof(total_ensembles));
+	eeprom_read(TOTAL_SERVICES_ADDR, &total_services, sizeof(total_services));
 
-
-	//display info about  ensembles
-	send_debug_msg("Ensembles found: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(total_ensembles, itoa_buffer, 10), CRLF_SEND);
-
-	send_debug_msg("--------------------------------------------------", CRLF_SEND);
-	send_debug_msg("| Number", CRLF_NO_SEND);
-	send_debug_msg(" | Label          ", CRLF_NO_SEND);
-	send_debug_msg("| Frequency ", CRLF_NO_SEND);
-	send_debug_msg(" | Channel |", CRLF_SEND);
-
-	for(uint8_t ensembles_index = 0; ensembles_index < total_ensembles; ensembles_index++)
+	if(total_services != 0xFF && total_ensembles != 0xFF)
 	{
-		send_debug_msg("| ", CRLF_NO_SEND);
-		send_debug_msg(itoa(ensembles_index, itoa_buffer, 10), CRLF_NO_SEND);
-		send_debug_msg("      | ", CRLF_NO_SEND);
+		eeprom_read(LAST_FREQUENCY_ADDR, &actual_freq, sizeof(actual_freq));
+		eeprom_read(LAST_FREQ_ID_ADDR, &actual_freq_id, sizeof(actual_freq_id));
 
-		send_debug_msg(ensembles_list[ensembles_index].label, CRLF_NO_SEND);
-		send_debug_msg("| ", CRLF_NO_SEND);
-
-		send_debug_msg(itoa(ensembles_list[ensembles_index].freq, itoa_buffer, 10), CRLF_NO_SEND);
-		send_debug_msg(" kHz | ", CRLF_NO_SEND);
-
-		send_debug_msg(dab_channels_names[ensembles_list[ensembles_index].freq_id], CRLF_NO_SEND);
-		if(ensembles_list[ensembles_index].freq_id < 20)
+		eeprom_read(LAST_STATION_INDEX_ADDR, &last_station_index, sizeof(last_station_index));
+		if(last_station_index == 0xFF)
 		{
-			send_debug_msg(" ", CRLF_NO_SEND);
+			last_station_index = 0;
 		}
-		send_debug_msg("  |", CRLF_SEND);
-	}
-	send_debug_msg("--------------------------------------------------", CRLF_SEND);
+		actual_station = last_station_index;
 
-	//display info about services
-	send_debug_msg("Services found: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(total_services, itoa_buffer, 10), CRLF_SEND);
-
-	send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
-	send_debug_msg("| Number | Name             | Ensemble Name   | Frequency  | Channel | PTY | Service ID | Component ID |", CRLF_SEND);
-
-	for(uint8_t services_index = 0; services_index < total_services; services_index++)
-	{
-		//Number
-		send_debug_msg("| ", CRLF_NO_SEND);
-		send_debug_msg(itoa(services_index, itoa_buffer, 10), CRLF_NO_SEND);
-		if(services_index < 10)
-		{
-			send_debug_msg(" ", CRLF_NO_SEND);
-		}
-		send_debug_msg("     | ", CRLF_NO_SEND);
-
-		//Name
-		if(services_list[services_index].name[0])
-		{
-			send_debug_msg(services_list[services_index].name, CRLF_NO_SEND);
-		}
-		else
-		{
-			send_debug_msg("Unknown name    ", CRLF_NO_SEND);
-		}
-		send_debug_msg(" | ", CRLF_NO_SEND);
-
-		//Ensemble Name
 		for(uint8_t i = 0; i < total_ensembles; i++)
 		{
-			if(ensembles_list[i].freq_id == services_list[services_index].freq_id)
+			eeprom_read(ENSEMBLES_TABLE_START_ADDR + PAGE_SIZE * i, &ensembles_list[i], sizeof(dab_ensemble_t));
+		}
+
+		for(uint8_t i = 0; i < total_services; i++)
+		{
+			eeprom_read(SERVICES_TABLE_START_ADDR + PAGE_SIZE * i, &services_list[i], sizeof(dab_service_t));
+		}
+
+		//check if everything is ok
+
+		//display freq table
+		send_debug_msg("Found ", CRLF_NO_SEND);
+		send_debug_msg(itoa(freq_cnt, itoa_buffer, 10), CRLF_NO_SEND);
+		send_debug_msg(" frequencies in list.", CRLF_SEND);
+		for(int i = 0; i < freq_cnt; i++)
+		{
+			send_debug_msg(itoa(i, itoa_buffer, 10), CRLF_NO_SEND);
+			send_debug_msg(": ", CRLF_NO_SEND);
+			send_debug_msg(itoa(freq_table[i], itoa_buffer, 10), CRLF_NO_SEND);
+			send_debug_msg(" kHz", CRLF_SEND);
+		}
+
+
+		//display info about  ensembles
+		send_debug_msg("Ensembles found: ", CRLF_NO_SEND);
+		send_debug_msg(itoa(total_ensembles, itoa_buffer, 10), CRLF_SEND);
+
+		send_debug_msg("--------------------------------------------------", CRLF_SEND);
+		send_debug_msg("| Number", CRLF_NO_SEND);
+		send_debug_msg(" | Label          ", CRLF_NO_SEND);
+		send_debug_msg("| Frequency ", CRLF_NO_SEND);
+		send_debug_msg(" | Channel |", CRLF_SEND);
+
+		for(uint8_t ensembles_index = 0; ensembles_index < total_ensembles; ensembles_index++)
+		{
+			send_debug_msg("| ", CRLF_NO_SEND);
+			send_debug_msg(itoa(ensembles_index, itoa_buffer, 10), CRLF_NO_SEND);
+			send_debug_msg("      | ", CRLF_NO_SEND);
+
+			send_debug_msg(ensembles_list[ensembles_index].label, CRLF_NO_SEND);
+			send_debug_msg("| ", CRLF_NO_SEND);
+
+			send_debug_msg(itoa(ensembles_list[ensembles_index].freq, itoa_buffer, 10), CRLF_NO_SEND);
+			send_debug_msg(" kHz | ", CRLF_NO_SEND);
+
+			send_debug_msg(dab_channels_names[ensembles_list[ensembles_index].freq_id], CRLF_NO_SEND);
+			if(ensembles_list[ensembles_index].freq_id < 20)
 			{
-				send_debug_msg(ensembles_list[i].label, CRLF_NO_SEND);
-				break;
+				send_debug_msg(" ", CRLF_NO_SEND);
 			}
+			send_debug_msg("  |", CRLF_SEND);
 		}
-		send_debug_msg(" | ", CRLF_NO_SEND);
+		send_debug_msg("--------------------------------------------------", CRLF_SEND);
 
-		//Frequency
-		send_debug_msg(itoa(services_list[services_index].freq, itoa_buffer, 10), CRLF_NO_SEND);
-		send_debug_msg(" kHz | ", CRLF_NO_SEND);
+		//display info about services
+		send_debug_msg("Services found: ", CRLF_NO_SEND);
+		send_debug_msg(itoa(total_services, itoa_buffer, 10), CRLF_SEND);
 
-		//Channel
-		send_debug_msg(dab_channels_names[services_list[services_index].freq_id], CRLF_NO_SEND);
-		if(services_list[services_index].freq_id < 20)
+		send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
+		send_debug_msg("| Number | Name             | Ensemble Name   | Frequency  | Channel | PTY | Service ID | Component ID |", CRLF_SEND);
+
+		for(uint8_t services_index = 0; services_index < total_services; services_index++)
 		{
-			send_debug_msg(" ", CRLF_NO_SEND);
+			//Number
+			send_debug_msg("| ", CRLF_NO_SEND);
+			send_debug_msg(itoa(services_index, itoa_buffer, 10), CRLF_NO_SEND);
+			if(services_index < 10)
+			{
+				send_debug_msg(" ", CRLF_NO_SEND);
+			}
+			send_debug_msg("     | ", CRLF_NO_SEND);
+
+			//Name
+			if(services_list[services_index].name[0])
+			{
+				send_debug_msg(services_list[services_index].name, CRLF_NO_SEND);
+			}
+			else
+			{
+				send_debug_msg("Unknown name    ", CRLF_NO_SEND);
+			}
+			send_debug_msg(" | ", CRLF_NO_SEND);
+
+			//Ensemble Name
+			for(uint8_t i = 0; i < total_ensembles; i++)
+			{
+				if(ensembles_list[i].freq_id == services_list[services_index].freq_id)
+				{
+					send_debug_msg(ensembles_list[i].label, CRLF_NO_SEND);
+					break;
+				}
+			}
+			send_debug_msg(" | ", CRLF_NO_SEND);
+
+			//Frequency
+			send_debug_msg(itoa(services_list[services_index].freq, itoa_buffer, 10), CRLF_NO_SEND);
+			send_debug_msg(" kHz | ", CRLF_NO_SEND);
+
+			//Channel
+			send_debug_msg(dab_channels_names[services_list[services_index].freq_id], CRLF_NO_SEND);
+			if(services_list[services_index].freq_id < 20)
+			{
+				send_debug_msg(" ", CRLF_NO_SEND);
+			}
+			send_debug_msg("  | ", CRLF_NO_SEND);
+
+			//PTY
+			send_debug_msg(itoa(services_list[services_index].p_ty, itoa_buffer, 10), CRLF_NO_SEND);
+			if(services_list[services_index].p_ty < 10)
+			{
+				send_debug_msg(" ", CRLF_NO_SEND);
+			}
+			send_debug_msg("  | ", CRLF_NO_SEND);
+
+			//Service ID
+			send_debug_msg("0x", CRLF_NO_SEND);
+			send_debug_msg(itoa(services_list[services_index].service_id, itoa_buffer, 16), CRLF_NO_SEND);
+			send_debug_msg("     | ", CRLF_NO_SEND);
+
+			//Component ID
+			send_debug_msg("0x", CRLF_NO_SEND);
+			send_debug_msg(itoa(services_list[services_index].components[0].subchannel_id, itoa_buffer, 16), CRLF_NO_SEND);
+			send_debug_msg("          |", CRLF_SEND);
 		}
-		send_debug_msg("  | ", CRLF_NO_SEND);
+		send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
 
-		//PTY
-		send_debug_msg(itoa(services_list[services_index].p_ty, itoa_buffer, 10), CRLF_NO_SEND);
-		if(services_list[services_index].p_ty < 10)
-		{
-			send_debug_msg(" ", CRLF_NO_SEND);
-		}
-		send_debug_msg("  | ", CRLF_NO_SEND);
 
-		//Service ID
-		send_debug_msg("0x", CRLF_NO_SEND);
-		send_debug_msg(itoa(services_list[services_index].service_id, itoa_buffer, 16), CRLF_NO_SEND);
-		send_debug_msg("     | ", CRLF_NO_SEND);
+		Si468x_dab_tune_freq(services_list[actual_station].freq_id, 0);
+		play_station(0);
 
-		//Component ID
-		send_debug_msg("0x", CRLF_NO_SEND);
-		send_debug_msg(itoa(services_list[services_index].components[0].subchannel_id, itoa_buffer, 16), CRLF_NO_SEND);
-		send_debug_msg("          |", CRLF_SEND);
 	}
-	send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
-
-
-
-	Si468x_dab_tune_freq(services_list[actual_station].freq_id, 0);
-	Si468x_dab_start_digital_service(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
-
+	else
+	{
+		send_debug_msg("Service list is empty!", CRLF_SEND);
+		actual_freq = 0;
+		actual_freq_id = 0;
+		total_ensembles = 0;
+		total_services = 0;
+		actual_station = 0;
+	}
 }
 
 

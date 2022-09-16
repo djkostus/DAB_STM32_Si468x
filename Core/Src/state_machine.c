@@ -8,13 +8,29 @@
 #include "state_machine.h"
 #include "debug_uart.h"
 #include "display_management.h"
+#include "Si468x.h"
+#include "eeprom.h"
+#include "touch.h"
+
+uint8_t state = main_screen;
 
 void state_machine()
 {
-	Display_clear_screen();
-	Display_dab_digrad_status_background();
-
-//	HAL_TIM_Base_Start_IT(&htim10);	//enable this timer = enable continuously show signal info
+	switch(state)
+	{
+	case main_screen:
+		break;
+	case stations_list:
+		break;
+	case signal_info:
+		break;
+	case scanning:
+		break;
+	case settings:
+		break;
+	default:
+		break;
+	}
 }
 
 

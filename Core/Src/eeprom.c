@@ -51,10 +51,10 @@ void eeprom_clear_scanning_data()
 		 clear_page_sequence[i] = 0xFF;
 	 }
 
-
 	//clear various data connected with scanning
 
 	eeprom_write(PAGE_SIZE * SCAN_RELATED_DATA_PAGE, &clear_page_sequence, sizeof(clear_page_sequence));
+
 
 	//clear ensembles list
 	for(uint8_t i = 0; i < MAX_ENSEMBLES; i++)

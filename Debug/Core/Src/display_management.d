@@ -31,7 +31,8 @@ Core/Src/display_management.o: ../Core/Src/display_management.c \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_tim_ex.h \
  ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h \
- ../Core/Inc/Si468x.h ../Core/Inc/ILI9341_Driver.h
+ ../Core/Inc/Si468x.h ../Core/Inc/ILI9341_Driver.h ../Core/Inc/eeprom.h \
+ ../Core/Inc/eeprom_addresses.h ../Core/Inc/dab_defs.h
 ../Core/Inc/display_management.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h:
@@ -67,3 +68,6 @@ Core/Src/display_management.o: ../Core/Src/display_management.c \
 ../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_uart.h:
 ../Core/Inc/Si468x.h:
 ../Core/Inc/ILI9341_Driver.h:
+../Core/Inc/eeprom.h:
+../Core/Inc/eeprom_addresses.h:
+../Core/Inc/dab_defs.h:

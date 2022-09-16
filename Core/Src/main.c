@@ -109,7 +109,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim11);
 
   ILI9341_Init();
-  Display_init_screen();
+  Display_booting_screen();
 
   Si468x_dab_init();
 
@@ -117,6 +117,12 @@ int main(void)
   Display_dab_digrad_status_background();
 
   restore_from_eeprom();
+
+//  Display_station_list_background();
+//  Display_stations_list_data(6);
+
+
+  Display_settings_screen();
 
 
 
@@ -128,7 +134,7 @@ int main(void)
   while (1)
   {
 
-	  Si468x_dab_digrad_status();
+//	  Si468x_dab_digrad_status();
 	  Si468x_dab_get_time();
 	  Touch_Read(0);
 
@@ -168,7 +174,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 168;
+  RCC_OscInitStruct.PLL.PLLN = 240;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)

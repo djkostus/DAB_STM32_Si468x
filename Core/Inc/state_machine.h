@@ -10,6 +10,15 @@
 
 #include "stm32f4xx.h"
 
+enum state{
+main_screen,
+stations_list,
+scanning,
+signal_info,
+settings
+};
+
+
 void state_machine();
 
 

@@ -27,7 +27,7 @@ uint8_t CMD_RDY = 0X90;
 
 uint16_t xtemp, ytemp;
 uint16_t x_pixel_val, y_pixel_val;
-uint8_t state=0;
+//uint8_t state=0;
 
 char touch_itoa_buffer[64];
 
@@ -51,12 +51,12 @@ void Touch_Read(uint8_t state)
 
 		if(x_pixel_val > 5 && x_pixel_val < 157 && y_pixel_val > 195 && x_pixel_val < 235)
 		{
-			play_station(0);
+			play_station(1);
 		}
 
 		if(x_pixel_val > 162 && x_pixel_val < 315 && y_pixel_val > 195 && x_pixel_val < 235)
 		{
-			play_station(1);
+			play_station(2);
 		}
 	}
 }

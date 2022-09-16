@@ -26,10 +26,10 @@
 ../Core/Src/Si468x.c:648:6:Si468x_dab_start_digital_service	16	static
 ../Core/Src/Si468x.c:680:9:Si468x_dab_get_ensemble_info	24	static
 ../Core/Src/Si468x.c:731:6:Si468x_dab_full_scan	16	static
-../Core/Src/Si468x.c:909:6:Si468x_dab_get_audio_info	56	static
-../Core/Src/Si468x.c:955:6:Si468x_dab_get_event_status	8	static
-../Core/Src/Si468x.c:968:6:Si468x_dab_get_component_info	40	static
-../Core/Src/Si468x.c:1018:6:Si468x_dab_test_get_ber_info	48	static
-../Core/Src/Si468x.c:1034:6:Si468x_dab_get_time	8	static
-../Core/Src/Si468x.c:1071:6:play_station	24	static
-../Core/Src/Si468x.c:1133:6:restore_from_eeprom	24	static
+../Core/Src/Si468x.c:910:6:Si468x_dab_get_audio_info	56	static
+../Core/Src/Si468x.c:956:6:Si468x_dab_get_event_status	8	static
+../Core/Src/Si468x.c:969:6:Si468x_dab_get_component_info	40	static
+../Core/Src/Si468x.c:1019:6:Si468x_dab_test_get_ber_info	48	static
+../Core/Src/Si468x.c:1035:6:Si468x_dab_get_time	8	static
+../Core/Src/Si468x.c:1072:6:play_station	16	static
+../Core/Src/Si468x.c:1124:6:restore_from_eeprom	32	static

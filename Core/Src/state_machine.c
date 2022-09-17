@@ -113,6 +113,13 @@ void state_machine()
 			}
 		}
 
+		//Service 1 button handling
+//		if(touch_coordinates.x > 163 && touch_coordinates.x < 315 && touch_coordinates.y > 195 && touch_coordinates.y < 235)
+//		{
+//			state_change_done = 0;
+//			state = settings;
+//		}
+
 		break;
 
 	case signal_info:

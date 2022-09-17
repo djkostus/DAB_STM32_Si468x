@@ -1099,30 +1099,9 @@ void Si468x_dab_get_time()
 	}
 }
 
-void play_station(uint8_t direction)
+void play_station(uint8_t station_id)
 {
-	if(dab_management.total_ensembles && dab_management.total_services)
-	{
-		switch(direction)
-		{
-			case 2:
-				dab_management.actual_station++;
-				if(dab_management.actual_station == dab_management.total_services)
-				{
-					dab_management.actual_station = 0;
-				}
-				break;
-			case 1:
-				dab_management.actual_station--;
-				if(dab_management.actual_station < 0 || dab_management.actual_station > dab_management.total_services)
-				{
-					dab_management.actual_station = dab_management.total_services - 1;
-				}
-				break;
-			default:
-				break;
-		}
-
+		dab_management.actual_station = station_id;
 		dab_management.last_station_index = dab_management.actual_station;
 
 		eeprom_write(LAST_STATION_INDEX_ADDR, &dab_management.last_station_index, sizeof(dab_management.last_station_index));
@@ -1135,11 +1114,8 @@ void play_station(uint8_t direction)
 		Si468x_dab_tune_freq(services_list[dab_management.actual_station].freq_id, 0); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
 		Si468x_dab_get_component_info(services_list[dab_management.actual_station].service_id, services_list[dab_management.actual_station].components[0].subchannel_id);
 		Si468x_dab_start_digital_service(services_list[dab_management.actual_station].service_id, services_list[dab_management.actual_station].components[0].subchannel_id);
-
 		Si468x_dab_digrad_status();
 		Si468x_dab_get_audio_info();
-
-
 	}
 
 }

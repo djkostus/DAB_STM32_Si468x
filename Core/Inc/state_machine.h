@@ -12,7 +12,7 @@
 
 enum state{
 main_screen,
-stations_list,
+services_list,
 scanning,
 signal_info,
 settings

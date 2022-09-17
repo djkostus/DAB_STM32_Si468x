@@ -102,26 +102,23 @@ void Display_main_screen_data()
 
 }
 
-void Display_station_list_background()
+void Display_stations_list_background()
 {
 	Display_clear_screen();
 
 	ILI9341_Draw_String(5, 1, WHITE, BLACK, "DAB SERVICE LIST", 2); //Naglowek
 
 	//Station 1 background
-	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 20, 285, 40);
+	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 20, 285, 50);
 	//Station 2 background
-	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 45, 285, 65);
+	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 55, 285, 85);
 	//Station 3 background
-	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 70, 285, 90);
+	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 90, 285, 120);
 	//Station 4 background
-	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 95, 285, 115);
+	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 125, 285, 155);
 	//Station 5 background
-	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 120, 285, 140);
-	//Station 6 background
-	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 145, 285, 165);
-	//Station 7 background
-	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 170, 285, 190);
+	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 160, 285, 190);
+
 
 	//up button
 	ILI9341_Draw_Filled_Rectangle(ORANGE, 290, 20, 315, 102);
@@ -144,26 +141,26 @@ void Display_stations_list_data(uint8_t start_station_index)
 {
 	dab_service_t temp;
 
-	for(uint8_t i = 0; i < 7; i++)
+	for(uint8_t i = 0; i < 5; i++)
 	{
 		if((i + start_station_index + 1) < 10)
 		{
-			ILI9341_Draw_String(8, 23 + 25 * i, WHITE, DARKGREY, " ", 2);
-			ILI9341_Draw_String(17, 23 + 25 * i, WHITE, DARKGREY, itoa(i + start_station_index + 1, itoa_buffer, 10), 2);
+			ILI9341_Draw_String(8, 28 + 35 * i, WHITE, DARKGREY, " ", 2);
+			ILI9341_Draw_String(17, 28 + 35 * i, WHITE, DARKGREY, itoa(i + start_station_index + 1, itoa_buffer, 10), 2);
 		}
 		else
 		{
-			ILI9341_Draw_String(8, 23 + 25 * i, WHITE, DARKGREY, itoa(i + start_station_index + 1, itoa_buffer, 10), 2);
+			ILI9341_Draw_String(8, 28 + 35 * i, WHITE, DARKGREY, itoa(i + start_station_index + 1, itoa_buffer, 10), 2);
 		}
-		ILI9341_Draw_String(24, 23 + 25 * i, WHITE, DARKGREY, ".", 2);
+		ILI9341_Draw_String(24, 28 + 35 * i, WHITE, DARKGREY, ".", 2);
 
 		eeprom_read(SERVICES_TABLE_START_ADDR + PAGE_SIZE * (i + start_station_index), &temp, sizeof(dab_service_t));
-		ILI9341_Draw_String(34, 23 + 25 * i, WHITE, DARKGREY, temp.name, 2);
-		ILI9341_Draw_String(171, 23 + 25 * i, WHITE, DARKGREY, dab_channels_names[temp.freq_id], 2);
-		ILI9341_Draw_String(202, 23 + 25 * i, WHITE, DARKGREY, itoa(temp.freq / 1000, itoa_buffer, 10), 2);
-		ILI9341_Draw_String(225, 23 + 25 * i, WHITE, DARKGREY, ".", 2);
-		ILI9341_Draw_String(232, 23 + 25 * i, WHITE, DARKGREY, itoa(temp.freq % 1000, itoa_buffer, 10), 2);
-		ILI9341_Draw_String(259, 23 + 25 * i, WHITE, DARKGREY, "MHz", 2);
+		ILI9341_Draw_String(34, 28 + 35 * i, WHITE, DARKGREY, temp.name, 2);
+		ILI9341_Draw_String(171, 28 + 35 * i, WHITE, DARKGREY, dab_channels_names[temp.freq_id], 2);
+		ILI9341_Draw_String(202, 28 + 35 * i, WHITE, DARKGREY, itoa(temp.freq / 1000, itoa_buffer, 10), 2);
+		ILI9341_Draw_String(225, 28 + 35 * i, WHITE, DARKGREY, ".", 2);
+		ILI9341_Draw_String(232, 28 + 35 * i, WHITE, DARKGREY, itoa(temp.freq % 1000, itoa_buffer, 10), 2);
+		ILI9341_Draw_String(259, 28 + 35 * i, WHITE, DARKGREY, "MHz", 2);
 	}
 
 }

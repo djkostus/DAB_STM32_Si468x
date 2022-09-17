@@ -16,6 +16,8 @@ uint8_t state = main_screen;
 
 uint8_t state_change_done = 0;
 
+uint8_t srv_list_start_index = 0;
+
 touch_coordinates_t touch_coordinates;
 
 void state_machine()
@@ -49,10 +51,12 @@ void state_machine()
 
 		break;
 
-	case stations_list:
+	case services_list:
 		if(!state_change_done)
 		{
-			Display_station_list_background();
+			srv_list_start_index = 0;
+			Display_stations_list_background();
+			Display_stations_list_data(srv_list_start_index);
 			HAL_Delay(1000); //time to complete refresh display
 			state_change_done = 1;
 		}
@@ -74,12 +78,22 @@ void state_machine()
 		//up button handling
 		if(touch_coordinates.x > 290 && touch_coordinates.x < 315 && touch_coordinates.y > 20 && touch_coordinates.y < 102)
 		{
+			srv_list_start_index--;
+			if(srv_list_start_index > total_services && srv_list_start_index < 0)
+			{
+				srv_list_start_index = total_services - 1;
+			}
 
 		}
 
-		//down button handling (signal info)
+		//down button handling
 		if(touch_coordinates.x > 290 && touch_coordinates.x < 315 && touch_coordinates.y > 108 && touch_coordinates.y < 190)
 		{
+			srv_list_start_index++;
+			if(srv_list_start_index >= total_services)
+			{
+				srv_list_start_index = 0;
+			}
 
 		}
 
@@ -100,11 +114,11 @@ void state_machine()
 			state = main_screen;
 		}
 
-		//right button handling (stations list)
+		//right button handling (services list)
 		if(touch_coordinates.x >  163 && touch_coordinates.x < 315 && touch_coordinates.y > 195 && touch_coordinates.y < 235)
 		{
 			state_change_done = 0;
-			state = stations_list;
+			state = services_list;
 		}
 
 
@@ -171,11 +185,11 @@ void state_machine()
 
 		}
 
-		//left button handling (stations list)
+		//left button handling (services list)
 		if(touch_coordinates.x >  5 && touch_coordinates.x < 157 && touch_coordinates.y > 195 && touch_coordinates.y < 235)
 		{
 			state_change_done = 0;
-			state = stations_list;
+			state = services_list;
 		}
 
 		//right button handling (main screen)

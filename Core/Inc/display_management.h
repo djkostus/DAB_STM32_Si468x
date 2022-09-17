@@ -20,7 +20,7 @@ void Display_booting_screen();
 void Display_main_screen_background();
 void Display_main_screen_data();
 
-void Display_station_list_background();
+void Display_stations_list_background();
 void Display_stations_list_data(uint8_t start_station_index);
 
 void Display_scanning_screen_background();

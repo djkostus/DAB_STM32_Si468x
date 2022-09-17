@@ -12,7 +12,7 @@
 
 static char itoa_buffer[64];
 
-uint8_t display_freeze = 0;
+static uint8_t display_freeze = 0;
 
 
 void Display_clear_screen()
@@ -137,30 +137,48 @@ void Display_stations_list_background()
 
 }
 
-void Display_stations_list_data(uint8_t start_station_index)
+void Display_stations_list_data(int start_station_index, dab_management_t _dab_management)
 {
 	dab_service_t temp;
 
-	for(uint8_t i = 0; i < 5; i++)
+	if(_dab_management.total_services)
 	{
-		if((i + start_station_index + 1) < 10)
+		for(uint8_t i = 0; i < 5; i++)
 		{
-			ILI9341_Draw_String(8, 28 + 35 * i, WHITE, DARKGREY, " ", 2);
-			ILI9341_Draw_String(17, 28 + 35 * i, WHITE, DARKGREY, itoa(i + start_station_index + 1, itoa_buffer, 10), 2);
-		}
-		else
-		{
-			ILI9341_Draw_String(8, 28 + 35 * i, WHITE, DARKGREY, itoa(i + start_station_index + 1, itoa_buffer, 10), 2);
-		}
-		ILI9341_Draw_String(24, 28 + 35 * i, WHITE, DARKGREY, ".", 2);
+			if((i + start_station_index) > (_dab_management.total_services - 1))
+			{
+				start_station_index = 0 - i;
+			}
 
-		eeprom_read(SERVICES_TABLE_START_ADDR + PAGE_SIZE * (i + start_station_index), &temp, sizeof(dab_service_t));
-		ILI9341_Draw_String(34, 28 + 35 * i, WHITE, DARKGREY, temp.name, 2);
-		ILI9341_Draw_String(171, 28 + 35 * i, WHITE, DARKGREY, dab_channels_names[temp.freq_id], 2);
-		ILI9341_Draw_String(202, 28 + 35 * i, WHITE, DARKGREY, itoa(temp.freq / 1000, itoa_buffer, 10), 2);
-		ILI9341_Draw_String(225, 28 + 35 * i, WHITE, DARKGREY, ".", 2);
-		ILI9341_Draw_String(232, 28 + 35 * i, WHITE, DARKGREY, itoa(temp.freq % 1000, itoa_buffer, 10), 2);
-		ILI9341_Draw_String(259, 28 + 35 * i, WHITE, DARKGREY, "MHz", 2);
+			if((i + start_station_index + 1) < 10)
+			{
+				ILI9341_Draw_String(8, 28 + 35 * i, WHITE, DARKGREY, " ", 2);
+				ILI9341_Draw_String(17, 28 + 35 * i, WHITE, DARKGREY, itoa(i + start_station_index + 1, itoa_buffer, 10), 2);
+			}
+			else
+			{
+				ILI9341_Draw_String(8, 28 + 35 * i, WHITE, DARKGREY, itoa(i + start_station_index + 1, itoa_buffer, 10), 2);
+			}
+
+			ILI9341_Draw_String(24, 28 + 35 * i, WHITE, DARKGREY, ".", 2);
+
+			eeprom_read(SERVICES_TABLE_START_ADDR + PAGE_SIZE * (i + start_station_index), &temp, sizeof(dab_service_t));
+			ILI9341_Draw_String(34, 28 + 35 * i, WHITE, DARKGREY, temp.name, 2);
+			ILI9341_Draw_String(171, 28 + 35 * i, WHITE, DARKGREY, dab_channels_names[temp.freq_id], 2);
+			ILI9341_Draw_String(202, 28 + 35 * i, WHITE, DARKGREY, itoa(temp.freq / 1000, itoa_buffer, 10), 2);
+			ILI9341_Draw_String(225, 28 + 35 * i, WHITE, DARKGREY, ".", 2);
+			ILI9341_Draw_String(232, 28 + 35 * i, WHITE, DARKGREY, itoa(temp.freq % 1000, itoa_buffer, 10), 2);
+			ILI9341_Draw_String(259, 28 + 35 * i, WHITE, DARKGREY, "MHz", 2);
+		}
+	}
+
+	else
+	{
+		ILI9341_Draw_String(8, 28, WHITE, DARKGREY, "Service list is empty!", 2);
+		ILI9341_Draw_String(8, 63, WHITE, DARKGREY, "Select DAB BAND SCAN", 2);
+		ILI9341_Draw_String(8, 98, WHITE, DARKGREY, "from SETTINGS screen", 2);
+		ILI9341_Draw_String(8, 133, WHITE, DARKGREY, "to find services available", 2);
+		ILI9341_Draw_String(8, 168, WHITE, DARKGREY, "in your localization.", 2);
 	}
 
 }
@@ -207,30 +225,43 @@ void Display_scanning_screen_background()
 
 }
 
-void Display_scanning_screen_data()
+void Display_scanning_screen_data(dab_digrad_status_t _digrad_status, dab_management_t _dab_management)
 {
 	//Scanning status bar
-	ILI9341_Draw_Filled_Rectangle(WHITE, 10, 50, 310, 60);
-
+	ILI9341_Draw_Filled_Rectangle(GREEN, 10, 50, 10 + (300 * (_digrad_status.tune_index + 1)) / _dab_management.freq_cnt, 60);
+	ILI9341_Draw_Filled_Rectangle(WHITE, 10 + (300 * (_digrad_status.tune_index + 1)) / _dab_management.freq_cnt, 50, 310, 60);
 
 	//Found ensembles background
-	ILI9341_Draw_String(145, 73, WHITE, DARKGREY, "0", 2);
+	ILI9341_Draw_String(145, 73, WHITE, DARKGREY, itoa(_dab_management.total_ensembles, itoa_buffer, 10), 2);
 
 	//Found stations background
-	ILI9341_Draw_String(135, 98, WHITE, DARKGREY, "0", 2);
+	ILI9341_Draw_String(135, 98, WHITE, DARKGREY, itoa(_dab_management.total_services, itoa_buffer, 10), 2);
 
 	//Actual freq ID
-	ILI9341_Draw_String(118, 123, WHITE, DARKGREY, "11", 2);
+	ILI9341_Draw_String(118, 123, WHITE, DARKGREY, itoa(_digrad_status.tune_index + 1, itoa_buffer, 10), 2);
 	ILI9341_Draw_String(137, 123, WHITE, DARKGREY, "/", 2);
-	ILI9341_Draw_String(147, 123, WHITE, DARKGREY, "40", 2);
+	ILI9341_Draw_String(147, 123, WHITE, DARKGREY, itoa(_dab_management.freq_cnt, itoa_buffer, 10), 2);
 
 	//Freq value
-	ILI9341_Draw_String(95, 148, WHITE, DARKGREY, "190", 2);
-	ILI9341_Draw_String(129, 148, WHITE, DARKGREY, "250", 2);
+	ILI9341_Draw_String(95, 148, WHITE, DARKGREY, itoa(_digrad_status.tune_freq / 1000, itoa_buffer, 10), 2);
+	ILI9341_Draw_String(129, 148, WHITE, DARKGREY, itoa(_digrad_status.tune_freq % 1000, itoa_buffer, 10), 2);
 
 	//channel name
-	ILI9341_Draw_String(80, 173, WHITE, DARKGREY, "11B", 2);
+	ILI9341_Draw_String(80, 173, WHITE, DARKGREY, "       ", 2);
+	ILI9341_Draw_String(80, 173, WHITE, DARKGREY, dab_channels_names[_digrad_status.tune_index], 2);
 
+
+}
+
+void Display_scanning_screen_complete()
+{
+	//SCANNING DAB STRING background
+	ILI9341_Draw_Filled_Rectangle(DARKGREY, 5, 20, 315, 40);
+	ILI9341_Draw_String(80, 23, WHITE, DARKGREY, "Scanning complete!     ", 2);
+
+	//Cancel Button switches to OK button
+	ILI9341_Draw_Filled_Rectangle(ORANGE, 5, 195, 315, 235);
+	ILI9341_Draw_String(130, 207, WHITE, ORANGE, "  OK  ", 2);
 
 }
 

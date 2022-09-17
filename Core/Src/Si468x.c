@@ -16,6 +16,7 @@
 #include "debug_uart.h"
 #include "dab_defs.h"
 #include "eeprom.h"
+#include "touch.h"
 
 #include <string.h>
 
@@ -23,38 +24,29 @@
 #define BOOT_WRITE_STEPS 3							//number of bootloader write steps
 
 #define SIGNAL_CHECK_INTERVAL 50					//interval between signal quality check during scanning
-#define VALID_TIMEOUT 4								//timeout for scanning purposes, determines how long to wait for valid and acquire, total timeout = SIGNAL_CHECK_INTERVAL * VALID_TIMEOUT [ms]
-#define FIC_Q_TIMEOUT 100							//timeout for scanning purposes, determines how long to wait for achieve FIC Quality = 100, total timeout = SIGNAL_CHECK_INTERVAL * FIC_Q_TIMEOUT [ms]
+#define VALID_TIMEOUT 6								//timeout for scanning purposes, determines how long to wait for valid and acquire, total timeout = SIGNAL_CHECK_INTERVAL * VALID_TIMEOUT [ms]
+#define FIC_Q_TIMEOUT 150							//timeout for scanning purposes, determines how long to wait for achieve FIC Quality = 100, total timeout = SIGNAL_CHECK_INTERVAL * FIC_Q_TIMEOUT [ms]
 
-uint8_t dab_spi_tx_buffer[SPI_TX_BUFFER_SIZE];		//SPI TX Buffer using to send data to Si468x
-uint8_t dab_spi_rx_buffer[SPI_RX_BUFFER_SIZE];		//SPI RX Buffer using to read data from Si468x
+static uint8_t dab_spi_tx_buffer[SPI_TX_BUFFER_SIZE];		//SPI TX Buffer using to send data to Si468x
+static uint8_t dab_spi_rx_buffer[SPI_RX_BUFFER_SIZE];		//SPI RX Buffer using to read data from Si468x
 
-char itoa_buffer[64];								//buffer using to send debug informations by UART, it is necessary for itoa function
+static char itoa_buffer[64];								//buffer using to send debug informations by UART, it is necessary for itoa function
 
-RETURN_CODE status = 0;								//return status during executing some commands on Si468x
+static RETURN_CODE status = 0;								//return status during executing some commands on Si468x
 
-uint32_t freq_table[48];							//table of frequencies (channels) read from Si468x memory
+static uint32_t freq_table[48];							//table of frequencies (channels) read from Si468x memory
 
-uint8_t freq_cnt = 0;								//quantity of frequencies in Si468x memory
+static dab_digrad_status_t dab_digrad_status;				//struct that contains some metrics informing about signal quality and status
 
-dab_digrad_status_t dab_digrad_status;				//struct that contains some metrics informing about signal quality and status
+static rd_reply_t rd_reply;								//struct that contains Si468x flags obtained during RD REPLY Command
+static dab_events_t dab_events;							//struct that contains info about DAB flags obtained during DAB_GET_EVENT_STATUS command
+static time_t time;										//struct that contains data & time obtained from DAB+
 
-rd_reply_t rd_reply;								//struct that contains Si468x flags obtained during RD REPLY Command
-dab_events_t dab_events;							//struct that contains info about DAB flags obtained during DAB_GET_EVENT_STATUS command
-time_t time;										//struct that contains data & time obtained from DAB+
+static dab_ensemble_t ensembles_list[10];					//list of ensembles found during full scan
+static dab_service_t services_list[100];					//list of services found during full scan
 
-dab_ensemble_t ensembles_list[10];					//list of ensembles found during full scan
-dab_service_t services_list[100];					//list of services found during full scan
-uint8_t total_services = 0;							//total quantity of services found during full scan
-uint8_t total_ensembles = 0;						//total quantity of ensembles found during full scan
-uint8_t actual_services = 0;						//actual quantity of services during scanning process, this variable is necessary to save stations in memory
+static dab_management_t dab_management;					//struct that contains some DAB management data
 
-uint32_t actual_freq = 0;							//value of the frequency to which the Si468x is currently tuned in kHz
-uint8_t actual_freq_id = 0;							//frequency table index of the frequency to which the Si468x is currently tuned in kHz
-
-uint8_t actual_station = 0;
-
-uint8_t last_station_index = 0;
 
 void Si468x_dab_init()
 {
@@ -436,13 +428,13 @@ void Si468x_dab_get_freq_list()
 		if(dab_spi_rx_buffer[4])
 		{
 			uint8_t read_offset = 2;
-			freq_cnt = dab_spi_rx_buffer[4];
+			dab_management.freq_cnt = dab_spi_rx_buffer[4];
 			send_debug_msg("Found ", CRLF_NO_SEND);
-			send_debug_msg(itoa(freq_cnt, itoa_buffer, 10), CRLF_NO_SEND);
+			send_debug_msg(itoa(dab_management.freq_cnt, itoa_buffer, 10), CRLF_NO_SEND);
 			send_debug_msg(" frequencies in list.", CRLF_SEND);
 			status = Si468x_read_reply(3, dab_spi_rx_buffer);
-			status = Si468x_read_reply((freq_cnt + read_offset) * 4, dab_spi_rx_buffer);
-			for(int i = 0; i < freq_cnt; i++)
+			status = Si468x_read_reply((dab_management.freq_cnt + read_offset) * 4, dab_spi_rx_buffer);
+			for(int i = 0; i < dab_management.freq_cnt; i++)
 			{
 				freq_table[i] = dab_spi_rx_buffer[4 * (i + read_offset)] + (dab_spi_rx_buffer[4 * (i + read_offset) + 1] << 8) + (dab_spi_rx_buffer[4 * (i + read_offset) + 2] << 16) + (dab_spi_rx_buffer[4 * (i + read_offset) + 3] << 24);
 				send_debug_msg(itoa(i, itoa_buffer, 10), CRLF_NO_SEND);
@@ -454,7 +446,7 @@ void Si468x_dab_get_freq_list()
 			//save to eeprom
 			send_debug_msg("Saving to EEPROM...", CRLF_SEND);
 
-			eeprom_write(FREQ_TABLE_SIZE_ADDR, &freq_cnt, sizeof(freq_cnt));
+			eeprom_write(FREQ_TABLE_SIZE_ADDR, &dab_management.freq_cnt, sizeof(dab_management.freq_cnt));
 
 			for (uint8_t i = 0; i < 3; i++)
 			{
@@ -501,8 +493,8 @@ void Si468x_dab_tune_freq(uint8_t channel, uint16_t antcap)
 			send_debug_msg("Tuned successfully. Time: ", CRLF_NO_SEND);
 			send_debug_msg(itoa(i ,itoa_buffer, 10), CRLF_NO_SEND);
 			send_debug_msg(" ms.", CRLF_SEND);
-			actual_freq_id = channel;
-			actual_freq = freq_table[channel];
+			dab_management.actual_freq_id = channel;
+			dab_management.actual_freq = freq_table[channel];
 			break;
 		}
 		if(i == TUNE_TIMEOUT_MS - 1)
@@ -531,7 +523,7 @@ void Si468x_dab_reset_interrupts()
 	}
 }
 
-void Si468x_dab_digrad_status()
+dab_digrad_status_t Si468x_dab_digrad_status()
 {
 //	send_debug_msg("----------------Getting DAB Digrad Status----------------", CRLF_SEND);
 
@@ -551,8 +543,9 @@ void Si468x_dab_digrad_status()
 		{
 			dab_digrad_status.cnr = 0; //cnr powyzej 54 nie wystapi, a skrajnie duza wartosc podczas skanowania jest przeklamana
 		}
-//		Display_dab_digrad_status_data(dab_digrad_status);
+
 	}
+	return dab_digrad_status;
 }
 
 void Si468x_dab_get_digital_service_list()
@@ -585,64 +578,80 @@ void Si468x_dab_get_digital_service_list()
 	//-----read services info---------------------------------------------------------------------------------------------------------------
 	for(uint8_t service_index = 0; service_index < number_of_services; service_index++)
 	{
-		services_list[service_index + actual_services].freq = actual_freq;
-		services_list[service_index + actual_services].freq_id = actual_freq_id;
+		services_list[service_index + dab_management.actual_services].freq = dab_management.actual_freq;
+		services_list[service_index + dab_management.actual_services].freq_id = dab_management.actual_freq_id;
 
-		services_list[service_index + actual_services].pd_flag = dab_spi_rx_buffer[12 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x01;
-		services_list[service_index + actual_services].number_of_components = dab_spi_rx_buffer[13 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F;
+		services_list[service_index + dab_management.actual_services].pd_flag = dab_spi_rx_buffer[12 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x01;
+		services_list[service_index + dab_management.actual_services].number_of_components = dab_spi_rx_buffer[13 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F;
 
 		//ignore service with PD Flag = 1 - it's data service, not audio service
-		if(services_list[service_index + actual_services].pd_flag)
+		if(services_list[service_index + dab_management.actual_services].pd_flag)
 		{
 			services_count++;
-			components_count += services_list[service_index + actual_services].number_of_components;
+			components_count += services_list[service_index + dab_management.actual_services].number_of_components;
 			service_index--;
 			number_of_services--;
 			continue;
 		}
 
-		services_list[service_index + actual_services].p_ty = (dab_spi_rx_buffer[12 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x3E) >> 1;
+		services_list[service_index + dab_management.actual_services].p_ty = (dab_spi_rx_buffer[12 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x3E) >> 1;
 
 		//it's not necessary to check pd flag because stations with pd_flag = 1 are ignored now, but it's for future purposes
-		switch(services_list[service_index + actual_services].pd_flag)
+		switch(services_list[service_index + dab_management.actual_services].pd_flag)
 		{
 			case 0:
-				services_list[service_index + actual_services].srv_ref = dab_spi_rx_buffer[8 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] + ((dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F) << 8);
-				services_list[service_index + actual_services].country_id = (dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0xF0) >> 4;
-				services_list[service_index + actual_services].service_id = (services_list[service_index + actual_services].country_id << 12) + services_list[service_index + actual_services].srv_ref;
+				services_list[service_index + dab_management.actual_services].srv_ref = dab_spi_rx_buffer[8 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] + ((dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F) << 8);
+				services_list[service_index + dab_management.actual_services].country_id = (dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0xF0) >> 4;
+				services_list[service_index + dab_management.actual_services].service_id = (services_list[service_index + dab_management.actual_services].country_id << 12) + services_list[service_index + dab_management.actual_services].srv_ref;
 				break;
 
 			case 1:
-				services_list[service_index + actual_services].srv_ref = dab_spi_rx_buffer[8 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] + (dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] << 8) + ((dab_spi_rx_buffer[10 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F) << 16);
-				services_list[service_index + actual_services].country_id = (dab_spi_rx_buffer[10 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0xF0) >> 4;
-				services_list[service_index + actual_services].service_id = (services_list[service_index + actual_services].country_id << 20) + services_list[service_index + actual_services].srv_ref;
+				services_list[service_index + dab_management.actual_services].srv_ref = dab_spi_rx_buffer[8 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] + (dab_spi_rx_buffer[9 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] << 8) + ((dab_spi_rx_buffer[10 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x0F) << 16);
+				services_list[service_index + dab_management.actual_services].country_id = (dab_spi_rx_buffer[10 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0xF0) >> 4;
+				services_list[service_index + dab_management.actual_services].service_id = (services_list[service_index + dab_management.actual_services].country_id << 20) + services_list[service_index + dab_management.actual_services].srv_ref;
 				break;
 
 			default:
 				break;
 		}
 
-		for(uint8_t name_index = 0; name_index <= 15; name_index++)
+
+		if(dab_spi_rx_buffer[16 + LIST_READ_OFFSET  + 24 * services_count + 4 * components_count]) //check if name is valid by checking first char of name, it shouldn't be 0
 		{
-			services_list[service_index + actual_services].name[name_index] = dab_spi_rx_buffer[16 + name_index + LIST_READ_OFFSET  + 24 * services_count + 4 * components_count];
-			if(services_list[service_index + actual_services].name[name_index] == 0x86)	//Correct "ó" coding: 0x86 -> 0xF3, ó as o: 0x86 -> 0x6F
+			for(uint8_t name_index = 0; name_index <= 15; name_index++)
 			{
-				services_list[service_index + actual_services].name[name_index] = 0x6F;
+				services_list[service_index + dab_management.actual_services].name[name_index] = dab_spi_rx_buffer[16 + name_index + LIST_READ_OFFSET  + 24 * services_count + 4 * components_count];
+				if(services_list[service_index + dab_management.actual_services].name[name_index] == 0x86)	//Correct "ó" coding: 0x86 -> 0xF3, ó as o: 0x86 -> 0x6F
+				{
+					services_list[service_index + dab_management.actual_services].name[name_index] = 0x6F;
+				}
 			}
 		}
 
-		//----read component info---------------------------------------------------------------------------------------------
-		for(uint8_t component_index = 0; component_index < services_list[service_index + actual_services].number_of_components; component_index++)
+		else
 		{
-			services_list[service_index + actual_services].components[component_index].tm_id = (dab_spi_rx_buffer[33 + LIST_READ_OFFSET  + 24 * services_count + 4 * components_count] & 0xC0) >> 14;
-			services_list[service_index + actual_services].components[component_index].subchannel_id = dab_spi_rx_buffer[32 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x3F;
+			char empty_name[20] = "Unknown Name    ";
+
+			for(uint8_t name_index = 0; name_index <= 15; name_index++)
+			{
+				services_list[service_index + dab_management.actual_services].name[name_index] = empty_name[name_index];
+			}
+		}
+
+
+
+		//----read component info---------------------------------------------------------------------------------------------
+		for(uint8_t component_index = 0; component_index < services_list[service_index + dab_management.actual_services].number_of_components; component_index++)
+		{
+			services_list[service_index + dab_management.actual_services].components[component_index].tm_id = (dab_spi_rx_buffer[33 + LIST_READ_OFFSET  + 24 * services_count + 4 * components_count] & 0xC0) >> 14;
+			services_list[service_index + dab_management.actual_services].components[component_index].subchannel_id = dab_spi_rx_buffer[32 + LIST_READ_OFFSET + 24 * services_count + 4 * components_count] & 0x3F;
 			components_count++;
 		}
 		services_count++;
 	}
 
-	total_services += number_of_services;
-	actual_services += number_of_services;
+	dab_management.total_services += number_of_services;
+	dab_management.actual_services += number_of_services;
 }
 
 void Si468x_dab_start_digital_service(uint32_t service_id, uint32_t component_id)
@@ -708,16 +717,16 @@ uint8_t Si468x_dab_get_ensemble_info()
 		if(ensemble_id_temp)
 		{
 			send_debug_msg("Ensemble found.", CRLF_SEND);
-			ensembles_list[total_ensembles].id = ensemble_id_temp;
-			ensembles_list[total_ensembles].freq = actual_freq;
-			ensembles_list[total_ensembles].freq_id  =actual_freq_id;
+			ensembles_list[dab_management.total_ensembles].id = ensemble_id_temp;
+			ensembles_list[dab_management.total_ensembles].freq = dab_management.actual_freq;
+			ensembles_list[dab_management.total_ensembles].freq_id  = dab_management.actual_freq_id;
 
 			for(uint8_t i = 0; i < 16; i++)
 			{
-				ensembles_list[total_ensembles].label[i] = dab_spi_rx_buffer[6 + i];
+				ensembles_list[dab_management.total_ensembles].label[i] = dab_spi_rx_buffer[6 + i];
 			}
 
-			total_ensembles++;
+			dab_management.total_ensembles++;
 			return 1;
 		}
 		else
@@ -728,18 +737,36 @@ uint8_t Si468x_dab_get_ensemble_info()
 	}
 }
 
-void Si468x_dab_full_scan()
+uint8_t Si468x_dab_full_scan()
 {
 	send_debug_msg("----------------------DAB Full Scan----------------------", CRLF_SEND);
-	total_services = 0;
-	total_ensembles = 0;
-	actual_services = 0;
+	dab_management.total_services = 0;
+	dab_management.total_ensembles = 0;
+	dab_management.actual_services = 0;
 
 	uint8_t valid_timeout = 0;
 	uint8_t fic_q_timeout = 0;
 
-	for(uint8_t freq_index = 0; freq_index < freq_cnt; freq_index++)
+	uint8_t _scan_cancel_flag = 0;
+
+	touch_coordinates_t _touch_coordinates;
+
+	for(uint8_t freq_index = 0; freq_index < dab_management.freq_cnt; freq_index++)
 	{
+		_touch_coordinates = Touch_read();
+//		_scan_cancel_flag = get_scan_cancel_flag();
+
+		//handle cancel button
+		if(_touch_coordinates.x >  5 && _touch_coordinates.x < 315 && _touch_coordinates.y > 195 && _touch_coordinates.y < 235)
+		{
+			_scan_cancel_flag = 1;
+		}
+
+		if(_scan_cancel_flag)
+		{
+			break;
+		}
+
 //		dab_digrad_status.valid = 0;
 //		dab_digrad_status.acq = 0;
 //		dab_digrad_status.fic_quality = 0;
@@ -789,122 +816,125 @@ void Si468x_dab_full_scan()
 				Si468x_dab_get_digital_service_list();
 			}
 		}
+		Display_scanning_screen_data(dab_digrad_status, dab_management);
 	}
 
-	eeprom_clear_scanning_data();
-
-	if(total_services)
+	if(_scan_cancel_flag)
 	{
-		eeprom_save_scanning_data(services_list, total_services, ensembles_list, total_ensembles);
+		send_debug_msg("Scanning cancelled.", CRLF_SEND);
+		restore_from_eeprom();
+		return 0;
 	}
 
-	//display info about  ensembles
-	send_debug_msg("Ensembles found: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(total_ensembles, itoa_buffer, 10), CRLF_SEND);
-
-	send_debug_msg("--------------------------------------------------", CRLF_SEND);
-	send_debug_msg("| Number", CRLF_NO_SEND);
-	send_debug_msg(" | Label          ", CRLF_NO_SEND);
-	send_debug_msg("| Frequency ", CRLF_NO_SEND);
-	send_debug_msg(" | Channel |", CRLF_SEND);
-
-	for(uint8_t ensembles_index = 0; ensembles_index < total_ensembles; ensembles_index++)
+	else
 	{
-		send_debug_msg("| ", CRLF_NO_SEND);
-		send_debug_msg(itoa(ensembles_index, itoa_buffer, 10), CRLF_NO_SEND);
-		send_debug_msg("      | ", CRLF_NO_SEND);
+		eeprom_clear_scanning_data();
 
-		send_debug_msg(ensembles_list[ensembles_index].label, CRLF_NO_SEND);
-		send_debug_msg("| ", CRLF_NO_SEND);
-
-		send_debug_msg(itoa(ensembles_list[ensembles_index].freq, itoa_buffer, 10), CRLF_NO_SEND);
-		send_debug_msg(" kHz | ", CRLF_NO_SEND);
-
-		send_debug_msg(dab_channels_names[ensembles_list[ensembles_index].freq_id], CRLF_NO_SEND);
-		if(ensembles_list[ensembles_index].freq_id < 20)
+		if(dab_management.total_services)
 		{
-			send_debug_msg(" ", CRLF_NO_SEND);
+			eeprom_save_scanning_data(services_list, dab_management.total_services, ensembles_list, dab_management.total_ensembles);
 		}
-		send_debug_msg("  |", CRLF_SEND);
-	}
-	send_debug_msg("--------------------------------------------------", CRLF_SEND);
 
-	//display info about services
-	send_debug_msg("Services found: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(total_services, itoa_buffer, 10), CRLF_SEND);
+		//display info about  ensembles
+		send_debug_msg("Ensembles found: ", CRLF_NO_SEND);
+		send_debug_msg(itoa(dab_management.total_ensembles, itoa_buffer, 10), CRLF_SEND);
 
-	send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
-	send_debug_msg("| Number | Name             | Ensemble Name   | Frequency  | Channel | PTY | Service ID | Component ID |", CRLF_SEND);
+		send_debug_msg("--------------------------------------------------", CRLF_SEND);
+		send_debug_msg("| Number", CRLF_NO_SEND);
+		send_debug_msg(" | Label          ", CRLF_NO_SEND);
+		send_debug_msg("| Frequency ", CRLF_NO_SEND);
+		send_debug_msg(" | Channel |", CRLF_SEND);
 
-	for(uint8_t services_index = 0; services_index < total_services; services_index++)
-	{
-		//Number
-		send_debug_msg("| ", CRLF_NO_SEND);
-		send_debug_msg(itoa(services_index, itoa_buffer, 10), CRLF_NO_SEND);
-		if(services_index < 10)
+		for(uint8_t ensembles_index = 0; ensembles_index < dab_management.total_ensembles; ensembles_index++)
 		{
-			send_debug_msg(" ", CRLF_NO_SEND);
-		}
-		send_debug_msg("     | ", CRLF_NO_SEND);
+			send_debug_msg("| ", CRLF_NO_SEND);
+			send_debug_msg(itoa(ensembles_index, itoa_buffer, 10), CRLF_NO_SEND);
+			send_debug_msg("      | ", CRLF_NO_SEND);
 
-		//Name
-		if(services_list[services_index].name[0])
-		{
-			send_debug_msg(services_list[services_index].name, CRLF_NO_SEND);
-		}
-		else
-		{
-			send_debug_msg("Unknown name    ", CRLF_NO_SEND);
-		}
-		send_debug_msg(" | ", CRLF_NO_SEND);
+			send_debug_msg(ensembles_list[ensembles_index].label, CRLF_NO_SEND);
+			send_debug_msg("| ", CRLF_NO_SEND);
 
-		//Ensemble Name
-		for(uint8_t i = 0; i < total_ensembles; i++)
-		{
-			if(ensembles_list[i].freq_id == services_list[services_index].freq_id)
+			send_debug_msg(itoa(ensembles_list[ensembles_index].freq, itoa_buffer, 10), CRLF_NO_SEND);
+			send_debug_msg(" kHz | ", CRLF_NO_SEND);
+
+			send_debug_msg(dab_channels_names[ensembles_list[ensembles_index].freq_id], CRLF_NO_SEND);
+			if(ensembles_list[ensembles_index].freq_id < 20)
 			{
-				send_debug_msg(ensembles_list[i].label, CRLF_NO_SEND);
-				break;
+				send_debug_msg(" ", CRLF_NO_SEND);
 			}
+			send_debug_msg("  |", CRLF_SEND);
 		}
-		send_debug_msg(" | ", CRLF_NO_SEND);
+		send_debug_msg("--------------------------------------------------", CRLF_SEND);
 
-		//Frequency
-		send_debug_msg(itoa(services_list[services_index].freq, itoa_buffer, 10), CRLF_NO_SEND);
-		send_debug_msg(" kHz | ", CRLF_NO_SEND);
+		//display info about services
+		send_debug_msg("Services found: ", CRLF_NO_SEND);
+		send_debug_msg(itoa(dab_management.total_services, itoa_buffer, 10), CRLF_SEND);
 
-		//Channel
-		send_debug_msg(dab_channels_names[services_list[services_index].freq_id], CRLF_NO_SEND);
-		if(services_list[services_index].freq_id < 20)
+		send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
+		send_debug_msg("| Number | Name             | Ensemble Name   | Frequency  | Channel | PTY | Service ID | Component ID |", CRLF_SEND);
+
+		for(uint8_t services_index = 0; services_index < dab_management.total_services; services_index++)
 		{
-			send_debug_msg(" ", CRLF_NO_SEND);
+			//Number
+			send_debug_msg("| ", CRLF_NO_SEND);
+			send_debug_msg(itoa(services_index, itoa_buffer, 10), CRLF_NO_SEND);
+			if(services_index < 10)
+			{
+				send_debug_msg(" ", CRLF_NO_SEND);
+			}
+			send_debug_msg("     | ", CRLF_NO_SEND);
+
+			//Name
+			send_debug_msg(services_list[services_index].name, CRLF_NO_SEND);
+			send_debug_msg(" | ", CRLF_NO_SEND);
+
+			//Ensemble Name
+			for(uint8_t i = 0; i < dab_management.total_ensembles; i++)
+			{
+				if(ensembles_list[i].freq_id == services_list[services_index].freq_id)
+				{
+					send_debug_msg(ensembles_list[i].label, CRLF_NO_SEND);
+					break;
+				}
+			}
+			send_debug_msg(" | ", CRLF_NO_SEND);
+
+			//Frequency
+			send_debug_msg(itoa(services_list[services_index].freq, itoa_buffer, 10), CRLF_NO_SEND);
+			send_debug_msg(" kHz | ", CRLF_NO_SEND);
+
+			//Channel
+			send_debug_msg(dab_channels_names[services_list[services_index].freq_id], CRLF_NO_SEND);
+			if(services_list[services_index].freq_id < 20)
+			{
+				send_debug_msg(" ", CRLF_NO_SEND);
+			}
+			send_debug_msg("  | ", CRLF_NO_SEND);
+
+			//PTY
+			send_debug_msg(itoa(services_list[services_index].p_ty, itoa_buffer, 10), CRLF_NO_SEND);
+			if(services_list[services_index].p_ty < 10)
+			{
+				send_debug_msg(" ", CRLF_NO_SEND);
+			}
+			send_debug_msg("  | ", CRLF_NO_SEND);
+
+			//Service ID
+			send_debug_msg("0x", CRLF_NO_SEND);
+			send_debug_msg(itoa(services_list[services_index].service_id, itoa_buffer, 16), CRLF_NO_SEND);
+			send_debug_msg("     | ", CRLF_NO_SEND);
+
+			//Component ID
+			send_debug_msg("0x", CRLF_NO_SEND);
+			send_debug_msg(itoa(services_list[services_index].components[0].subchannel_id, itoa_buffer, 16), CRLF_NO_SEND);
+			send_debug_msg("          |", CRLF_SEND);
 		}
-		send_debug_msg("  | ", CRLF_NO_SEND);
+		send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
 
-		//PTY
-		send_debug_msg(itoa(services_list[services_index].p_ty, itoa_buffer, 10), CRLF_NO_SEND);
-		if(services_list[services_index].p_ty < 10)
-		{
-			send_debug_msg(" ", CRLF_NO_SEND);
-		}
-		send_debug_msg("  | ", CRLF_NO_SEND);
-
-		//Service ID
-		send_debug_msg("0x", CRLF_NO_SEND);
-		send_debug_msg(itoa(services_list[services_index].service_id, itoa_buffer, 16), CRLF_NO_SEND);
-		send_debug_msg("     | ", CRLF_NO_SEND);
-
-		//Component ID
-		send_debug_msg("0x", CRLF_NO_SEND);
-		send_debug_msg(itoa(services_list[services_index].components[0].subchannel_id, itoa_buffer, 16), CRLF_NO_SEND);
-		send_debug_msg("          |", CRLF_SEND);
+		//to check if everything is ok in eeprom
+		//  eeprom_show();
+		return 1;
 	}
-	send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
-
-	//to check if everything is ok in eeprom
-	//  eeprom_show();
-
-
 }
 
 void Si468x_dab_get_audio_info()
@@ -1071,40 +1101,40 @@ void Si468x_dab_get_time()
 
 void play_station(uint8_t direction)
 {
-	if(total_ensembles && total_services)
+	if(dab_management.total_ensembles && dab_management.total_services)
 	{
 		switch(direction)
 		{
 			case 2:
-				actual_station++;
-				if(actual_station == total_services)
+				dab_management.actual_station++;
+				if(dab_management.actual_station == dab_management.total_services)
 				{
-				  actual_station = 0;
+					dab_management.actual_station = 0;
 				}
 				break;
 			case 1:
-				actual_station--;
-				if(actual_station < 0 || actual_station > total_services)
+				dab_management.actual_station--;
+				if(dab_management.actual_station < 0 || dab_management.actual_station > dab_management.total_services)
 				{
-				  actual_station = total_services - 1;
+					dab_management.actual_station = dab_management.total_services - 1;
 				}
 				break;
 			default:
 				break;
 		}
 
-		last_station_index = actual_station;
+		dab_management.last_station_index = dab_management.actual_station;
 
-		eeprom_write(LAST_STATION_INDEX_ADDR, &last_station_index, sizeof(last_station_index));
+		eeprom_write(LAST_STATION_INDEX_ADDR, &dab_management.last_station_index, sizeof(dab_management.last_station_index));
 
 		send_debug_msg("---------------------------------", CRLF_SEND);
 		send_debug_msg("Playing Station ", CRLF_NO_SEND);
-		send_debug_msg(itoa(actual_station + 1, itoa_buffer, 10), CRLF_SEND);
+		send_debug_msg(itoa(dab_management.actual_station + 1, itoa_buffer, 10), CRLF_SEND);
 		send_debug_msg("Name: ", CRLF_NO_SEND);
-		send_debug_msg(services_list[actual_station].name, CRLF_SEND);
-		Si468x_dab_tune_freq(services_list[actual_station].freq_id, 0); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
-		Si468x_dab_get_component_info(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
-		Si468x_dab_start_digital_service(services_list[actual_station].service_id, services_list[actual_station].components[0].subchannel_id);
+		send_debug_msg(services_list[dab_management.actual_station].name, CRLF_SEND);
+		Si468x_dab_tune_freq(services_list[dab_management.actual_station].freq_id, 0); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
+		Si468x_dab_get_component_info(services_list[dab_management.actual_station].service_id, services_list[dab_management.actual_station].components[0].subchannel_id);
+		Si468x_dab_start_digital_service(services_list[dab_management.actual_station].service_id, services_list[dab_management.actual_station].components[0].subchannel_id);
 
 		Si468x_dab_digrad_status();
 		Si468x_dab_get_audio_info();
@@ -1119,7 +1149,7 @@ void restore_from_eeprom()
 	send_debug_msg("--------------Restore from EEPROM memory-------------------", CRLF_SEND);
 
 	//restore frequency table
-	eeprom_read(FREQ_TABLE_SIZE_ADDR, &freq_cnt, sizeof(freq_cnt));
+	eeprom_read(FREQ_TABLE_SIZE_ADDR, &dab_management.freq_cnt, sizeof(dab_management.freq_cnt));
 	for (uint8_t i = 0; i < 3; i++)
 	{
 		eeprom_read(FREQ_TABLE_START_ADDR + PAGE_SIZE * i, &freq_table[i * PAGE_SIZE / 4], PAGE_SIZE);
@@ -1127,9 +1157,9 @@ void restore_from_eeprom()
 	}
 	//display freq table - check if everything is ok
 	send_debug_msg("Found ", CRLF_NO_SEND);
-	send_debug_msg(itoa(freq_cnt, itoa_buffer, 10), CRLF_NO_SEND);
+	send_debug_msg(itoa(dab_management.freq_cnt, itoa_buffer, 10), CRLF_NO_SEND);
 	send_debug_msg(" frequencies in list.", CRLF_SEND);
-	for(int i = 0; i < freq_cnt; i++)
+	for(int i = 0; i < dab_management.freq_cnt; i++)
 	{
 		send_debug_msg(itoa(i, itoa_buffer, 10), CRLF_NO_SEND);
 		send_debug_msg(": ", CRLF_NO_SEND);
@@ -1138,27 +1168,27 @@ void restore_from_eeprom()
 	}
 
 	//restore scanning data
-	eeprom_read(TOTAL_ENSEMBLES_ADDR, &total_ensembles, sizeof(total_ensembles));
-	eeprom_read(TOTAL_SERVICES_ADDR, &total_services, sizeof(total_services));
+	eeprom_read(TOTAL_ENSEMBLES_ADDR, &dab_management.total_ensembles, sizeof(dab_management.total_ensembles));
+	eeprom_read(TOTAL_SERVICES_ADDR, &dab_management.total_services, sizeof(dab_management.total_services));
 
-	if(total_services != 0xFF && total_ensembles != 0xFF)
+	if(dab_management.total_services != 0xFF && dab_management.total_ensembles != 0xFF)
 	{
-		eeprom_read(LAST_FREQUENCY_ADDR, &actual_freq, sizeof(actual_freq));
-		eeprom_read(LAST_FREQ_ID_ADDR, &actual_freq_id, sizeof(actual_freq_id));
+		eeprom_read(LAST_FREQUENCY_ADDR, &dab_management.actual_freq, sizeof(dab_management.actual_freq));
+		eeprom_read(LAST_FREQ_ID_ADDR, &dab_management.actual_freq_id, sizeof(dab_management.actual_freq_id));
 
-		eeprom_read(LAST_STATION_INDEX_ADDR, &last_station_index, sizeof(last_station_index));
-		if(last_station_index == 0xFF)
+		eeprom_read(LAST_STATION_INDEX_ADDR, &dab_management.last_station_index, sizeof(dab_management.last_station_index));
+		if(dab_management.last_station_index == 0xFF)
 		{
-			last_station_index = 0;
+			dab_management.last_station_index = 0;
 		}
-		actual_station = last_station_index;
+		dab_management.actual_station = dab_management.last_station_index;
 
-		for(uint8_t i = 0; i < total_ensembles; i++)
+		for(uint8_t i = 0; i < dab_management.total_ensembles; i++)
 		{
 			eeprom_read(ENSEMBLES_TABLE_START_ADDR + PAGE_SIZE * i, &ensembles_list[i], sizeof(dab_ensemble_t));
 		}
 
-		for(uint8_t i = 0; i < total_services; i++)
+		for(uint8_t i = 0; i < dab_management.total_services; i++)
 		{
 			eeprom_read(SERVICES_TABLE_START_ADDR + PAGE_SIZE * i, &services_list[i], sizeof(dab_service_t));
 		}
@@ -1167,9 +1197,9 @@ void restore_from_eeprom()
 
 		//display freq table
 		send_debug_msg("Found ", CRLF_NO_SEND);
-		send_debug_msg(itoa(freq_cnt, itoa_buffer, 10), CRLF_NO_SEND);
+		send_debug_msg(itoa(dab_management.freq_cnt, itoa_buffer, 10), CRLF_NO_SEND);
 		send_debug_msg(" frequencies in list.", CRLF_SEND);
-		for(int i = 0; i < freq_cnt; i++)
+		for(int i = 0; i < dab_management.freq_cnt; i++)
 		{
 			send_debug_msg(itoa(i, itoa_buffer, 10), CRLF_NO_SEND);
 			send_debug_msg(": ", CRLF_NO_SEND);
@@ -1180,7 +1210,7 @@ void restore_from_eeprom()
 
 		//display info about  ensembles
 		send_debug_msg("Ensembles found: ", CRLF_NO_SEND);
-		send_debug_msg(itoa(total_ensembles, itoa_buffer, 10), CRLF_SEND);
+		send_debug_msg(itoa(dab_management.total_ensembles, itoa_buffer, 10), CRLF_SEND);
 
 		send_debug_msg("--------------------------------------------------", CRLF_SEND);
 		send_debug_msg("| Number", CRLF_NO_SEND);
@@ -1188,7 +1218,7 @@ void restore_from_eeprom()
 		send_debug_msg("| Frequency ", CRLF_NO_SEND);
 		send_debug_msg(" | Channel |", CRLF_SEND);
 
-		for(uint8_t ensembles_index = 0; ensembles_index < total_ensembles; ensembles_index++)
+		for(uint8_t ensembles_index = 0; ensembles_index < dab_management.total_ensembles; ensembles_index++)
 		{
 			send_debug_msg("| ", CRLF_NO_SEND);
 			send_debug_msg(itoa(ensembles_index, itoa_buffer, 10), CRLF_NO_SEND);
@@ -1211,12 +1241,12 @@ void restore_from_eeprom()
 
 		//display info about services
 		send_debug_msg("Services found: ", CRLF_NO_SEND);
-		send_debug_msg(itoa(total_services, itoa_buffer, 10), CRLF_SEND);
+		send_debug_msg(itoa(dab_management.total_services, itoa_buffer, 10), CRLF_SEND);
 
 		send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
 		send_debug_msg("| Number | Name             | Ensemble Name   | Frequency  | Channel | PTY | Service ID | Component ID |", CRLF_SEND);
 
-		for(uint8_t services_index = 0; services_index < total_services; services_index++)
+		for(uint8_t services_index = 0; services_index < dab_management.total_services; services_index++)
 		{
 			//Number
 			send_debug_msg("| ", CRLF_NO_SEND);
@@ -1228,18 +1258,11 @@ void restore_from_eeprom()
 			send_debug_msg("     | ", CRLF_NO_SEND);
 
 			//Name
-			if(services_list[services_index].name[0])
-			{
-				send_debug_msg(services_list[services_index].name, CRLF_NO_SEND);
-			}
-			else
-			{
-				send_debug_msg("Unknown name    ", CRLF_NO_SEND);
-			}
+			send_debug_msg(services_list[services_index].name, CRLF_NO_SEND);
 			send_debug_msg(" | ", CRLF_NO_SEND);
 
 			//Ensemble Name
-			for(uint8_t i = 0; i < total_ensembles; i++)
+			for(uint8_t i = 0; i < dab_management.total_ensembles; i++)
 			{
 				if(ensembles_list[i].freq_id == services_list[services_index].freq_id)
 				{
@@ -1282,18 +1305,18 @@ void restore_from_eeprom()
 		send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
 
 
-		Si468x_dab_tune_freq(services_list[actual_station].freq_id, 0);
+		Si468x_dab_tune_freq(services_list[dab_management.actual_station].freq_id, 0);
 		play_station(0);
 
 	}
 	else
 	{
 		send_debug_msg("Service list is empty!", CRLF_SEND);
-		actual_freq = 0;
-		actual_freq_id = 0;
-		total_ensembles = 0;
-		total_services = 0;
-		actual_station = 0;
+		dab_management.actual_freq = 0;
+		dab_management.actual_freq_id = 0;
+		dab_management.total_ensembles = 0;
+		dab_management.total_services = 0;
+		dab_management.actual_station = 0;
 	}
 }
 
@@ -1303,3 +1326,17 @@ dab_digrad_status_t get_digrad_status()
 	return dab_digrad_status;
 }
 
+dab_service_t* get_dab_service_list()
+{
+	return services_list;
+}
+
+dab_ensemble_t* get_dab_ensemble_list()
+{
+	return ensembles_list;
+}
+
+dab_management_t get_dab_management()
+{
+	return dab_management;
+}

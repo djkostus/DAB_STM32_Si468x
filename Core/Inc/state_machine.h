@@ -12,7 +12,7 @@
 
 enum state{
 main_screen,
-services_list,
+services_list_screen,
 scanning,
 signal_info,
 settings
@@ -21,7 +21,7 @@ settings
 
 void state_machine();
 
-
+uint8_t get_scan_cancel_flag();
 
 
 #endif /* INC_STATE_MACHINE_H_ */

@@ -216,6 +216,17 @@ typedef struct{
 	uint8_t second			: 8;
 }time_t;
 
+typedef struct{
+	uint8_t total_services;							//total quantity of services found during full scan
+	uint8_t total_ensembles;						//total quantity of ensembles found during full scan
+	uint8_t actual_services;						//actual quantity of services during scanning process, this variable is necessary to save stations in memory
+	uint8_t actual_station;							//index of actually playing station
+	uint8_t last_station_index;						//index of last played station
+	uint32_t actual_freq;							//value of the frequency to which the Si468x is currently tuned in kHz
+	uint8_t actual_freq_id;							//frequency table index of the frequency to which the Si468x is currently tuned in kHz
+	uint8_t freq_cnt;								//quantity of frequencies in Si468x memory
+}dab_management_t;
+
 
 void Si468x_dab_init();
 void Si468x_reset();
@@ -249,11 +260,11 @@ uint16_t Si468x_get_property(uint16_t property_id);
 void Si468x_dab_get_freq_list();
 void Si468x_dab_tune_freq(uint8_t channel, uint16_t antcap);
 void Si468x_dab_reset_interrupts();
-void Si468x_dab_digrad_status();
-void SI468x_dab_get_digital_service_list();
+dab_digrad_status_t Si468x_dab_digrad_status();
+void Si468x_dab_get_digital_service_list();
 void Si468x_dab_start_digital_service(uint32_t service_id, uint32_t component_id);
 uint8_t Si468x_dab_get_ensemble_info();
-void Si468x_dab_full_scan();
+uint8_t Si468x_dab_full_scan();
 void Si468x_dab_get_audio_info();
 void Si468x_dab_get_event_status();
 void Si468x_dab_get_component_info(uint32_t service_id, uint8_t component_id);
@@ -267,5 +278,11 @@ void play_station(uint8_t direction);
 void restore_from_eeprom();
 
 dab_digrad_status_t get_digrad_status();
+dab_management_t get_dab_management();
+
+dab_service_t* get_dab_service_list();
+
+dab_ensemble_t* get_dab_ensemble_list();
+
 
 #endif /* INC_SI468X_H_ */

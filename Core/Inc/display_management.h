@@ -21,10 +21,11 @@ void Display_main_screen_background();
 void Display_main_screen_data();
 
 void Display_stations_list_background();
-void Display_stations_list_data(uint8_t start_station_index);
+void Display_stations_list_data(int start_station_index, dab_management_t _dab_management);
 
 void Display_scanning_screen_background();
-void Display_scanning_screen_data();
+void Display_scanning_screen_data(dab_digrad_status_t _digrad_status, dab_management_t _dab_management);
+void Display_scanning_screen_complete();
 
 void Display_dab_digrad_status_background();
 void Display_dab_digrad_status_data(dab_digrad_status_t digrad_status);

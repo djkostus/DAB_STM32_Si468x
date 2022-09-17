@@ -1,0 +1,2 @@
+../Core/Src/state_machine.c:32:6:state_machine	104	static
+../Core/Src/state_machine.c:239:9:get_scan_cancel_flag	4	static

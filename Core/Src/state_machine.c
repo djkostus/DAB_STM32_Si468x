@@ -16,9 +16,18 @@ uint8_t state = main_screen;
 
 uint8_t state_change_done = 0;
 
-uint8_t srv_list_start_index = 0;
+int srv_list_start_index = 0;
 
 touch_coordinates_t touch_coordinates;
+
+dab_digrad_status_t dab_digrad_status_to_display;
+dab_management_t dab_management_to_display;
+dab_service_t services_list_to_display[100];
+dab_ensemble_t ensembles_list_to_display[10];
+
+uint8_t scan_cancel_flag = 0;
+
+uint8_t scan_complete_flag = 0;
 
 void state_machine()
 {
@@ -51,12 +60,13 @@ void state_machine()
 
 		break;
 
-	case services_list:
+	case services_list_screen:
 		if(!state_change_done)
 		{
 			srv_list_start_index = 0;
+			dab_management_to_display = get_dab_management();
 			Display_stations_list_background();
-			Display_stations_list_data(srv_list_start_index);
+			Display_stations_list_data(srv_list_start_index, dab_management_to_display);
 			HAL_Delay(1000); //time to complete refresh display
 			state_change_done = 1;
 		}
@@ -78,23 +88,29 @@ void state_machine()
 		//up button handling
 		if(touch_coordinates.x > 290 && touch_coordinates.x < 315 && touch_coordinates.y > 20 && touch_coordinates.y < 102)
 		{
-			srv_list_start_index--;
-			if(srv_list_start_index > total_services && srv_list_start_index < 0)
+			if(dab_management_to_display.total_services)
 			{
-				srv_list_start_index = total_services - 1;
+				srv_list_start_index--;
+				if(srv_list_start_index > dab_management_to_display.total_services || srv_list_start_index < 0)
+				{
+					srv_list_start_index = dab_management_to_display.total_services - 1;
+				}
+				Display_stations_list_data(srv_list_start_index, dab_management_to_display);
 			}
-
 		}
 
 		//down button handling
 		if(touch_coordinates.x > 290 && touch_coordinates.x < 315 && touch_coordinates.y > 108 && touch_coordinates.y < 190)
 		{
-			srv_list_start_index++;
-			if(srv_list_start_index >= total_services)
+			if(dab_management_to_display.total_services)
 			{
-				srv_list_start_index = 0;
+				srv_list_start_index++;
+				if(srv_list_start_index >= dab_management_to_display.total_services)
+				{
+					srv_list_start_index = 0;
+				}
+				Display_stations_list_data(srv_list_start_index, dab_management_to_display);
 			}
-
 		}
 
 		break;
@@ -106,6 +122,8 @@ void state_machine()
 			HAL_Delay(1000); //time to complete refresh display
 			state_change_done = 1;
 		}
+		dab_digrad_status_to_display = Si468x_dab_digrad_status();
+		Display_dab_digrad_status_data(dab_digrad_status_to_display);
 
 		//left button handling (main screen)
 		if(touch_coordinates.x >  5 && touch_coordinates.x < 157 && touch_coordinates.y > 195 && touch_coordinates.y < 235)
@@ -118,11 +136,8 @@ void state_machine()
 		if(touch_coordinates.x >  163 && touch_coordinates.x < 315 && touch_coordinates.y > 195 && touch_coordinates.y < 235)
 		{
 			state_change_done = 0;
-			state = services_list;
+			state = services_list_screen;
 		}
-
-
-
 		break;
 
 	case scanning:
@@ -131,12 +146,24 @@ void state_machine()
 			Display_scanning_screen_background();
 			HAL_Delay(1000); //time to complete refresh display
 			state_change_done = 1;
+			scan_complete_flag = Si468x_dab_full_scan();
+			if(scan_complete_flag)
+			{
+//				dab_management_to_display = get_dab_management();
+//				Display_scanning_screen_data(dab_digrad_status_to_display, dab_management_to_display);
+				Display_scanning_screen_complete();
+				scan_complete_flag = 0;
+			}
 		}
+//		dab_digrad_status_to_display = Si468x_dab_digrad_status();
+//		Display_scanning_screen_data(dab_digrad_status_to_display);
 
 		//cancel button handling
 		if(touch_coordinates.x >  5 && touch_coordinates.x < 315 && touch_coordinates.y > 195 && touch_coordinates.y < 235)
 		{
-
+			scan_cancel_flag = 1;
+			state_change_done = 0;
+			state = settings;
 		}
 
 		break;
@@ -146,6 +173,7 @@ void state_machine()
 		{
 			Display_settings_screen_background();
 			HAL_Delay(1000); //time to complete refresh display
+			scan_cancel_flag = 0;
 			state_change_done = 1;
 		}
 
@@ -176,7 +204,8 @@ void state_machine()
 		//scanning button handling
 		if(touch_coordinates.x > 5 && touch_coordinates.x < 157 && touch_coordinates.y > 150 && touch_coordinates.y < 190)
 		{
-
+			state_change_done = 0;
+			state = scanning;
 		}
 
 		//touch calibration button handling
@@ -189,7 +218,7 @@ void state_machine()
 		if(touch_coordinates.x >  5 && touch_coordinates.x < 157 && touch_coordinates.y > 195 && touch_coordinates.y < 235)
 		{
 			state_change_done = 0;
-			state = services_list;
+			state = services_list_screen;
 		}
 
 		//right button handling (main screen)
@@ -207,4 +236,8 @@ void state_machine()
 	}
 }
 
+uint8_t get_scan_cancel_flag()
+{
+	return scan_cancel_flag;
+}
 

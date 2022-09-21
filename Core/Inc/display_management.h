@@ -18,10 +18,11 @@ void Display_clear_screen();
 void Display_booting_screen();
 
 void Display_main_screen_background();
-void Display_main_screen_data();
+void Display_main_screen_data(dab_service_t _services_list[], dab_ensemble_t _ensembles_list[], dab_management_t _dab_management, dab_audio_info_t _dab_audio_info);
+void Display_main_screen_empty();
 
 void Display_stations_list_background();
-void Display_stations_list_data(int start_station_index, dab_management_t _dab_management);
+void Display_stations_list_data(int start_station_index, dab_management_t _dab_management, dab_service_t* _dab_service_list);
 
 void Display_scanning_screen_background();
 void Display_scanning_screen_data(dab_digrad_status_t _digrad_status, dab_management_t _dab_management);
@@ -31,7 +32,7 @@ void Display_dab_digrad_status_background();
 void Display_dab_digrad_status_data(dab_digrad_status_t digrad_status);
 
 void Display_settings_screen_background();
-void Display_settings_screen_data();
+void Display_settings_screen_data(dab_management_t _dab_management);
 
 void Display_time(time_t time_val);
 

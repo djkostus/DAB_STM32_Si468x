@@ -10,7 +10,7 @@
 
 #include "stm32f4xx.h"
 
-enum state{
+enum system_state{
 main_screen,
 services_list_screen,
 scanning,
@@ -18,6 +18,10 @@ signal_info,
 settings
 };
 
+enum play_state{
+	not_playing,
+	playing
+};
 
 void state_machine();
 

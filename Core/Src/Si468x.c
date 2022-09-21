@@ -41,6 +41,7 @@ static dab_digrad_status_t dab_digrad_status;				//struct that contains some met
 static rd_reply_t rd_reply;								//struct that contains Si468x flags obtained during RD REPLY Command
 static dab_events_t dab_events;							//struct that contains info about DAB flags obtained during DAB_GET_EVENT_STATUS command
 static time_t time;										//struct that contains data & time obtained from DAB+
+static dab_audio_info_t dab_audio_info;					//struct that contains DAB+ audio info
 
 static dab_ensemble_t ensembles_list[10];					//list of ensembles found during full scan
 static dab_service_t services_list[100];					//list of services found during full scan
@@ -73,6 +74,7 @@ void Si468x_dab_init()
 	Si468x_set_property(SI468x_PROP_DIGITAL_SERVICE_INT_SOURCE, 0x01);				//Enables the DSRVPCKTINT interrupt of the GET_DIGITAL_SERVICE_DATA command
 //	Si468x_dab_get_freq_list(); 													//odczytujemy z ukladu liste czestotliwosci do tablicy
 	Si468x_get_sys_state(); //kontrolnie zeby sprawdzic czy demod dziala
+
 }
 
 void Si468x_reset()
@@ -833,6 +835,9 @@ uint8_t Si468x_dab_full_scan()
 		if(dab_management.total_services)
 		{
 			eeprom_save_scanning_data(services_list, dab_management.total_services, ensembles_list, dab_management.total_ensembles);
+			dab_management.actual_station = 0;
+			dab_management.last_station_index = 0;
+			eeprom_write(LAST_STATION_INDEX_ADDR, &dab_management.last_station_index, sizeof(dab_management.last_station_index));
 		}
 
 		//display info about  ensembles
@@ -848,7 +853,7 @@ uint8_t Si468x_dab_full_scan()
 		for(uint8_t ensembles_index = 0; ensembles_index < dab_management.total_ensembles; ensembles_index++)
 		{
 			send_debug_msg("| ", CRLF_NO_SEND);
-			send_debug_msg(itoa(ensembles_index, itoa_buffer, 10), CRLF_NO_SEND);
+			send_debug_msg(itoa(ensembles_index + 1, itoa_buffer, 10), CRLF_NO_SEND);
 			send_debug_msg("      | ", CRLF_NO_SEND);
 
 			send_debug_msg(ensembles_list[ensembles_index].label, CRLF_NO_SEND);
@@ -862,7 +867,7 @@ uint8_t Si468x_dab_full_scan()
 			{
 				send_debug_msg(" ", CRLF_NO_SEND);
 			}
-			send_debug_msg("  |", CRLF_SEND);
+			send_debug_msg("     |", CRLF_SEND);
 		}
 		send_debug_msg("--------------------------------------------------", CRLF_SEND);
 
@@ -877,8 +882,8 @@ uint8_t Si468x_dab_full_scan()
 		{
 			//Number
 			send_debug_msg("| ", CRLF_NO_SEND);
-			send_debug_msg(itoa(services_index, itoa_buffer, 10), CRLF_NO_SEND);
-			if(services_index < 10)
+			send_debug_msg(itoa(services_index + 1, itoa_buffer, 10), CRLF_NO_SEND);
+			if((services_index + 1) < 10)
 			{
 				send_debug_msg(" ", CRLF_NO_SEND);
 			}
@@ -909,7 +914,7 @@ uint8_t Si468x_dab_full_scan()
 			{
 				send_debug_msg(" ", CRLF_NO_SEND);
 			}
-			send_debug_msg("  | ", CRLF_NO_SEND);
+			send_debug_msg("     | ", CRLF_NO_SEND);
 
 			//PTY
 			send_debug_msg(itoa(services_list[services_index].p_ty, itoa_buffer, 10), CRLF_NO_SEND);
@@ -937,11 +942,8 @@ uint8_t Si468x_dab_full_scan()
 	}
 }
 
-void Si468x_dab_get_audio_info()
+dab_audio_info_t Si468x_dab_get_audio_info()
 {
-	uint16_t bit_rate, sample_rate;
-	uint8_t xpad_indicator, ps_flag, sbr_flag, audio_mode;
-
 	send_debug_msg("--------------Getting audio info from Si468x-------------", CRLF_SEND);
 	dab_spi_tx_buffer[0] = SI468X_CMD_DAB_GET_AUDIO_INFO;
 	dab_spi_tx_buffer[1] = 0x03; 	//	ber_option: 1 = long_term, 0 = short_term, ber_ack: 2 = reset counters, 0 = don't reset counters
@@ -950,37 +952,27 @@ void Si468x_dab_get_audio_info()
 	HAL_Delay(1);
 	status = Si468x_read_reply(20, dab_spi_rx_buffer);
 
-	bit_rate = (dab_spi_rx_buffer[5] << 8) + dab_spi_rx_buffer[4];
-	sample_rate = (dab_spi_rx_buffer[7] << 8) + dab_spi_rx_buffer[6];
-
-	xpad_indicator = (dab_spi_rx_buffer[8] & 0x30) >> 4;
-	ps_flag = (dab_spi_rx_buffer[8] & 0x08) >> 3;
-	sbr_flag = (dab_spi_rx_buffer[8] & 0x04) >> 2;
-	audio_mode = dab_spi_rx_buffer[8] & 0x03;
-
-	dab_digrad_status.fic_bit_cnt = dab_spi_rx_buffer[12] + (dab_spi_rx_buffer[13] << 8) + (dab_spi_rx_buffer[14] << 16) + (dab_spi_rx_buffer[15] << 24);
-	dab_digrad_status.fic_err_cnt = dab_spi_rx_buffer[16] + (dab_spi_rx_buffer[17] << 8) + (dab_spi_rx_buffer[18] << 16) + (dab_spi_rx_buffer[19] << 24);
-
-//	Display_dab_digrad_status_data(dab_digrad_status);
+	memcpy((uint8_t*)&dab_audio_info, (uint8_t*)&dab_spi_rx_buffer[4], sizeof(dab_audio_info));
 
 	send_debug_msg("Bitrate: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(bit_rate, itoa_buffer, 10), CRLF_SEND);
+	send_debug_msg(itoa(dab_audio_info.audio_bit_rate, itoa_buffer, 10), CRLF_SEND);
 
 	send_debug_msg("Sample rate: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(sample_rate, itoa_buffer, 10), CRLF_SEND);
+	send_debug_msg(itoa(dab_audio_info.audio_sample_rate, itoa_buffer, 10), CRLF_SEND);
 
 	send_debug_msg("XPAD Indicator: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(xpad_indicator, itoa_buffer, 10), CRLF_SEND);
+	send_debug_msg(itoa(dab_audio_info.audio_xpad_ind, itoa_buffer, 10), CRLF_SEND);
 
 	send_debug_msg("PS Flag: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(ps_flag, itoa_buffer, 10), CRLF_SEND);
+	send_debug_msg(itoa(dab_audio_info.audio_ps_flag, itoa_buffer, 10), CRLF_SEND);
 
 	send_debug_msg("SBR Flag: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(sbr_flag, itoa_buffer, 10), CRLF_SEND);
+	send_debug_msg(itoa(dab_audio_info.audio_sbr, itoa_buffer, 10), CRLF_SEND);
 
 	send_debug_msg("Audio Mode: ", CRLF_NO_SEND);
-	send_debug_msg(itoa(audio_mode, itoa_buffer, 10), CRLF_SEND);
+	send_debug_msg(itoa(dab_audio_info.audio_mode, itoa_buffer, 10), CRLF_SEND);
 
+	return dab_audio_info;
 }
 
 void Si468x_dab_get_event_status()
@@ -1083,6 +1075,7 @@ void Si468x_dab_get_time()
 		status = Si468x_read_reply(11, dab_spi_rx_buffer);
 
 		memcpy((uint8_t*)&time, (uint8_t*)&dab_spi_rx_buffer[4], sizeof(time));
+
 		Display_time(time);
 
 //		send_debug_msg(itoa(time.hour, itoa_buffer, 10), CRLF_NO_SEND);
@@ -1099,25 +1092,33 @@ void Si468x_dab_get_time()
 	}
 }
 
+void Si468x_set_audio_volume(uint8_t _volume)
+{
+	Si468x_set_property(SI468x_PROP_AUDIO_ANALOG_VOLUME, _volume);
+	dab_management.audio_volume = _volume;
+	send_debug_msg("Volume: ", CRLF_NO_SEND);
+	send_debug_msg(itoa(dab_management.audio_volume, itoa_buffer, 10), CRLF_NO_SEND);
+	send_debug_msg("/63", CRLF_SEND);
+	eeprom_write(LAST_VOLUME_ADDR, &_volume, sizeof(_volume));
+}
+
 void play_station(uint8_t station_id)
 {
-		dab_management.actual_station = station_id;
-		dab_management.last_station_index = dab_management.actual_station;
+	dab_management.actual_station = station_id;
+	dab_management.last_station_index = dab_management.actual_station;
 
-		eeprom_write(LAST_STATION_INDEX_ADDR, &dab_management.last_station_index, sizeof(dab_management.last_station_index));
+	eeprom_write(LAST_STATION_INDEX_ADDR, &dab_management.last_station_index, sizeof(dab_management.last_station_index));
 
-		send_debug_msg("---------------------------------", CRLF_SEND);
-		send_debug_msg("Playing Station ", CRLF_NO_SEND);
-		send_debug_msg(itoa(dab_management.actual_station + 1, itoa_buffer, 10), CRLF_SEND);
-		send_debug_msg("Name: ", CRLF_NO_SEND);
-		send_debug_msg(services_list[dab_management.actual_station].name, CRLF_SEND);
-		Si468x_dab_tune_freq(services_list[dab_management.actual_station].freq_id, 0); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
-		Si468x_dab_get_component_info(services_list[dab_management.actual_station].service_id, services_list[dab_management.actual_station].components[0].subchannel_id);
-		Si468x_dab_start_digital_service(services_list[dab_management.actual_station].service_id, services_list[dab_management.actual_station].components[0].subchannel_id);
-		Si468x_dab_digrad_status();
-		Si468x_dab_get_audio_info();
-	}
-
+	send_debug_msg("---------------------------------", CRLF_SEND);
+	send_debug_msg("Playing Station ", CRLF_NO_SEND);
+	send_debug_msg(itoa(dab_management.actual_station + 1, itoa_buffer, 10), CRLF_SEND);
+	send_debug_msg("Name: ", CRLF_NO_SEND);
+	send_debug_msg(services_list[dab_management.actual_station].name, CRLF_SEND);
+	Si468x_dab_tune_freq(services_list[dab_management.actual_station].freq_id, 0); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
+	Si468x_dab_get_component_info(services_list[dab_management.actual_station].service_id, services_list[dab_management.actual_station].components[0].subchannel_id);
+	Si468x_dab_start_digital_service(services_list[dab_management.actual_station].service_id, services_list[dab_management.actual_station].components[0].subchannel_id);
+	Si468x_dab_digrad_status();
+	Si468x_dab_get_audio_info();
 }
 
 void restore_from_eeprom()
@@ -1197,7 +1198,7 @@ void restore_from_eeprom()
 		for(uint8_t ensembles_index = 0; ensembles_index < dab_management.total_ensembles; ensembles_index++)
 		{
 			send_debug_msg("| ", CRLF_NO_SEND);
-			send_debug_msg(itoa(ensembles_index, itoa_buffer, 10), CRLF_NO_SEND);
+			send_debug_msg(itoa(ensembles_index + 1, itoa_buffer, 10), CRLF_NO_SEND);
 			send_debug_msg("      | ", CRLF_NO_SEND);
 
 			send_debug_msg(ensembles_list[ensembles_index].label, CRLF_NO_SEND);
@@ -1211,7 +1212,7 @@ void restore_from_eeprom()
 			{
 				send_debug_msg(" ", CRLF_NO_SEND);
 			}
-			send_debug_msg("  |", CRLF_SEND);
+			send_debug_msg("     |", CRLF_SEND);
 		}
 		send_debug_msg("--------------------------------------------------", CRLF_SEND);
 
@@ -1226,8 +1227,8 @@ void restore_from_eeprom()
 		{
 			//Number
 			send_debug_msg("| ", CRLF_NO_SEND);
-			send_debug_msg(itoa(services_index, itoa_buffer, 10), CRLF_NO_SEND);
-			if(services_index < 10)
+			send_debug_msg(itoa(services_index + 1, itoa_buffer, 10), CRLF_NO_SEND);
+			if((services_index +1) < 10)
 			{
 				send_debug_msg(" ", CRLF_NO_SEND);
 			}
@@ -1258,7 +1259,7 @@ void restore_from_eeprom()
 			{
 				send_debug_msg(" ", CRLF_NO_SEND);
 			}
-			send_debug_msg("  | ", CRLF_NO_SEND);
+			send_debug_msg("     | ", CRLF_NO_SEND);
 
 			//PTY
 			send_debug_msg(itoa(services_list[services_index].p_ty, itoa_buffer, 10), CRLF_NO_SEND);
@@ -1280,9 +1281,13 @@ void restore_from_eeprom()
 		}
 		send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
 
+		//restore volume level
+		eeprom_read(LAST_VOLUME_ADDR, &dab_management.audio_volume, sizeof(dab_management.audio_volume));
+		Si468x_set_audio_volume(dab_management.audio_volume);
 
-		Si468x_dab_tune_freq(services_list[dab_management.actual_station].freq_id, 0);
-		play_station(0);
+		//play last played station
+		Si468x_dab_tune_freq(services_list[dab_management.last_station_index].freq_id, 0);
+		play_station(dab_management.last_station_index);
 
 	}
 	else

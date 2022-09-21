@@ -32,6 +32,7 @@
 #include "touch.h"
 #include "state_machine.h"
 #include "eeprom.h"
+#include "ILI9341_Driver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -109,11 +110,12 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim11);
 
   ILI9341_Init();
+
   Display_booting_screen();
+
 
   Si468x_dab_init();
   restore_from_eeprom();
-
 
   /* USER CODE END 2 */
 

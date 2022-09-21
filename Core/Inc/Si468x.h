@@ -225,7 +225,31 @@ typedef struct{
 	uint32_t actual_freq;							//value of the frequency to which the Si468x is currently tuned in kHz
 	uint8_t actual_freq_id;							//frequency table index of the frequency to which the Si468x is currently tuned in kHz
 	uint8_t freq_cnt;								//quantity of frequencies in Si468x memory
+	uint8_t audio_volume;							//analog audio output volume (0...63)
 }dab_management_t;
+
+typedef struct{
+	//reply byte 4, 5
+	uint16_t audio_bit_rate			: 16;	//Audio bit rate of the current audio service (kbps).
+	//reply byte 6, 7
+	uint16_t audio_sample_rate		: 16;	//Sample rate of the current audio service (Hz)
+	//reply byte 8
+	uint8_t audio_mode				: 2;	//Audio mode. 0x0 - Dual, 0x1 - Mono, 0x2 - Stereo,	0x3	- Joint stereo
+	uint8_t audio_sbr				: 1;	//Audio SBR flag. only applicable to DAB+. Set to 0 for DAB
+	uint8_t audio_ps_flag			: 1;	//Audio PS flag. only applicable to DAB+. Set to 0 for DAB
+	uint8_t audio_xpad_ind			: 2;	//XPAD indicator. XPAD_NO: 0x0,	XPAD_SHORT: 0x1, XPAD_VARIABLE:	0x2, XPAD_RFU (reserved): 0x3
+	uint8_t 						: 2;	//ignore
+	//reply byte 9
+	uint8_t audio_drc_gain			: 8;	//The dynamic range control (DRC) gain that is applied to the current audio service. The range of this field is from 0 to 63, representing 0 to 15.75dB in increment of 0.25dB
+	//reply byte 10, 11
+	uint16_t						: 16;	//Ignore
+	//reply byte 12, 13, 14, 15
+	uint32_t pseudo_ber_bit_cnt		: 32;	//Number of bits tested in Pre-Viterbi pseudo BER measurement. If PSEUDO_BER_CONFIG is LONG_TERM_BER, this field returns the total number of bits tested since the service is started. If PSEUDO_BER_CONFIG is SHORT_TERM_BER, this field returns the number of bits tested in the most recent N audio frames. N is defined in DAB_TEST_PSEUDO_BER_OPTION.
+	//reply byte 16, 17, 18, 19
+	uint32_t pseudo_ber_err_cnt		: 32;	//Number of error bits in Pre-Viterbi pseudo BER measurement. If PSEUDO_BER_CONFIG is LONG_TERM_BER, this field returns the total number of error bits since the service is started. If PSEUDO_BER_CONFIG is SHORT_TERM_BER, this field returns the number of error bits in the most recent N audio frames. N is defined in DAB_TEST_PSEUDO_BER_OPTION.
+
+
+}dab_audio_info_t;
 
 
 void Si468x_dab_init();
@@ -265,7 +289,7 @@ void Si468x_dab_get_digital_service_list();
 void Si468x_dab_start_digital_service(uint32_t service_id, uint32_t component_id);
 uint8_t Si468x_dab_get_ensemble_info();
 uint8_t Si468x_dab_full_scan();
-void Si468x_dab_get_audio_info();
+dab_audio_info_t Si468x_dab_get_audio_info();
 void Si468x_dab_get_event_status();
 void Si468x_dab_get_component_info(uint32_t service_id, uint8_t component_id);
 
@@ -273,7 +297,9 @@ void Si468x_dab_test_get_ber_info();
 
 void Si468x_dab_get_time();
 
-void play_station(uint8_t direction);
+void Si468x_set_audio_volume(uint8_t _volume);
+
+void play_station(uint8_t station_id);
 
 void restore_from_eeprom();
 

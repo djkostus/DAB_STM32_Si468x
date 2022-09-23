@@ -27,9 +27,13 @@ dab_service_t* services_list_to_display;
 dab_ensemble_t* ensembles_list_to_display;
 dab_audio_info_t dab_audio_info_to_display;
 
+char* dls_label_to_display;
+
 uint8_t scan_cancel_flag = 0;
 
 uint8_t scan_complete_flag = 0;
+
+uint16_t audio_info_timeout;
 
 void state_machine()
 {
@@ -44,12 +48,9 @@ void state_machine()
 	}
 
 	dab_management_to_display = get_dab_management();
-	dab_digrad_status_to_display = Si468x_dab_digrad_status();
-
-	services_list_to_display = get_dab_service_list();
-	ensembles_list_to_display = get_dab_ensemble_list();
-//	dab_audio_info_to_display = Si468x_dab_get_audio_info();
+	dls_label_to_display = get_dls_label();
 	Si468x_dab_get_time();
+
 
 	switch(system_state)
 	{
@@ -61,8 +62,26 @@ void state_machine()
 			{
 				playing_state = not_playing;
 			}
+
+			else
+			{
+				services_list_to_display = get_dab_service_list();
+				ensembles_list_to_display = get_dab_ensemble_list();
+
+				audio_info_timeout = 50;
+				while(!dab_audio_info_to_display.audio_sample_rate)
+				{
+					dab_audio_info_to_display = Si468x_dab_get_audio_info();
+					audio_info_timeout--;
+					if(!audio_info_timeout)
+					{
+						break;
+					}
+				}
+			}
+
 			Display_main_screen_background();
-			dab_audio_info_to_display = Si468x_dab_get_audio_info();
+			Display_main_screen_data(services_list_to_display, ensembles_list_to_display, dab_management_to_display, dab_audio_info_to_display);
 			state_change_done = 1;
 		}
 
@@ -70,7 +89,8 @@ void state_machine()
 		{
 			if(playing_state == playing)
 			{
-				Display_main_screen_data(services_list_to_display, ensembles_list_to_display, dab_management_to_display, dab_audio_info_to_display);
+				Si468x_dab_get_digital_service_data();
+				Display_main_screen_dls(dls_label_to_display);
 			}
 			else
 			{
@@ -97,6 +117,7 @@ void state_machine()
 	case services_list_screen:
 		if(!state_change_done)
 		{
+			services_list_to_display = get_dab_service_list();
 //			srv_list_start_index = 0;
 			Display_stations_list_background();
 			Display_stations_list_data(srv_list_start_index, dab_management_to_display, services_list_to_display);
@@ -249,7 +270,7 @@ void state_machine()
 			Display_dab_digrad_status_background();
 			state_change_done = 1;
 		}
-
+		dab_digrad_status_to_display = Si468x_dab_digrad_status();
 		Display_dab_digrad_status_data(dab_digrad_status_to_display);
 
 		//left button handling (services list)

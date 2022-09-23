@@ -15,3 +15,8 @@ void send_debug_msg(char* msg, uint8_t is_crlf)//void send_debug_msg(char msg[],
 		HAL_UART_Transmit(&huart3, crlf, 2, 100);
 	}
 }
+
+void send_debug_data(uint8_t data)
+{
+	HAL_UART_Transmit(&huart3, data, 1, 100);
+}

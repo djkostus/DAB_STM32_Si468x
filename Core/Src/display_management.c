@@ -14,6 +14,7 @@ static char itoa_buffer[64];
 
 static uint8_t display_freeze = 0;
 
+uint8_t last_dls[128];
 
 void Display_clear_screen()
 {
@@ -77,7 +78,8 @@ void Display_main_screen_data(dab_service_t* _services_list, dab_ensemble_t* _en
 	ILI9341_Draw_String(8, 23, WHITE, DARKGREY, _services_list[_dab_management.actual_station].name, 2);
 
 	//Bar1
-	ILI9341_Draw_String(8, 48, WHITE, DARKGREY, "", 2);
+//	ILI9341_Draw_String(8, 48, WHITE, DARKGREY, _dls_label, 2);
+
 
 	//Bar2
 	ILI9341_Draw_String(8, 73, WHITE, DARKGREY, "", 2);
@@ -122,6 +124,23 @@ void Display_main_screen_data(dab_service_t* _services_list, dab_ensemble_t* _en
 	//Station picture
 
 }
+
+void Display_main_screen_dls(uint8_t* _dls_label)
+{
+	//check if new dls equals last dls, if new dls is different - display it on screen
+	if(strcmp(_dls_label, last_dls))
+	{
+		//clear DLS Label
+		ILI9341_Draw_String(8, 48, WHITE, DARKGREY, "                                                                                                                               ", 2);
+		//show new label on the screen
+		ILI9341_Draw_String(8, 48, WHITE, DARKGREY, _dls_label, 2);
+		for(uint8_t i = 0; i < 128; i++)
+		{
+			last_dls[i] = _dls_label[i];
+		}
+	}
+}
+
 
 void Display_main_screen_empty()
 {

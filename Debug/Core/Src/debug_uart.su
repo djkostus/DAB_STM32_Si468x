@@ -1,1 +1,2 @@
 ../Core/Src/debug_uart.c:7:6:send_debug_msg	24	static
+../Core/Src/debug_uart.c:19:6:send_debug_data	16	static

@@ -6,6 +6,8 @@
 
 void send_debug_msg(char* msg, uint8_t is_crlf);//void send_debug_msg(char msg[], uint8_t is_crlf);
 
+void send_debug_data(uint8_t data);
+
 
 
 #endif /* INC_DEBUG_UART_H_ */

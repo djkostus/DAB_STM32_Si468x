@@ -21,32 +21,36 @@
 #include <string.h>
 
 
-#define BOOT_WRITE_STEPS 3							//number of bootloader write steps
+#define BOOT_WRITE_STEPS 3												//number of bootloader write steps
 
-#define SIGNAL_CHECK_INTERVAL 50					//interval between signal quality check during scanning
-#define VALID_TIMEOUT 6								//timeout for scanning purposes, determines how long to wait for valid and acquire, total timeout = SIGNAL_CHECK_INTERVAL * VALID_TIMEOUT [ms]
-#define FIC_Q_TIMEOUT 150							//timeout for scanning purposes, determines how long to wait for achieve FIC Quality = 100, total timeout = SIGNAL_CHECK_INTERVAL * FIC_Q_TIMEOUT [ms]
+#define SIGNAL_CHECK_INTERVAL 50										//interval between signal quality check during scanning
+#define VALID_TIMEOUT 6													//timeout for scanning purposes, determines how long to wait for valid and acquire, total timeout = SIGNAL_CHECK_INTERVAL * VALID_TIMEOUT [ms]
+#define FIC_Q_TIMEOUT 150												//timeout for scanning purposes, determines how long to wait for achieve FIC Quality = 100, total timeout = SIGNAL_CHECK_INTERVAL * FIC_Q_TIMEOUT [ms]
 
-static uint8_t dab_spi_tx_buffer[SPI_TX_BUFFER_SIZE];		//SPI TX Buffer using to send data to Si468x
-static uint8_t dab_spi_rx_buffer[SPI_RX_BUFFER_SIZE];		//SPI RX Buffer using to read data from Si468x
+static uint8_t dab_spi_tx_buffer[SPI_TX_BUFFER_SIZE];					//SPI TX Buffer using to send data to Si468x
+static uint8_t dab_spi_rx_buffer[SPI_RX_BUFFER_SIZE];					//SPI RX Buffer using to read data from Si468x
 
-static char itoa_buffer[64];								//buffer using to send debug informations by UART, it is necessary for itoa function
+static char itoa_buffer[64];											//buffer using to send debug informations by UART, it is necessary for itoa function
 
-static RETURN_CODE status = 0;								//return status during executing some commands on Si468x
+static RETURN_CODE status = 0;											//return status during executing some commands on Si468x
 
-static uint32_t freq_table[48];							//table of frequencies (channels) read from Si468x memory
+static uint32_t freq_table[48];											//table of frequencies (channels) read from Si468x memory
 
-static dab_digrad_status_t dab_digrad_status;				//struct that contains some metrics informing about signal quality and status
+static dab_digrad_status_t dab_digrad_status;							//struct that contains some metrics informing about signal quality and status
 
-static rd_reply_t rd_reply;								//struct that contains Si468x flags obtained during RD REPLY Command
-static dab_events_t dab_events;							//struct that contains info about DAB flags obtained during DAB_GET_EVENT_STATUS command
-static time_t time;										//struct that contains data & time obtained from DAB+
-static dab_audio_info_t dab_audio_info;					//struct that contains DAB+ audio info
+static rd_reply_t rd_reply;												//struct that contains Si468x flags obtained during RD REPLY Command
+static dab_events_t dab_events;											//struct that contains info about DAB flags obtained during DAB_GET_EVENT_STATUS command
+static time_t time;														//struct that contains data & time obtained from DAB+
+static dab_audio_info_t dab_audio_info;									//struct that contains DAB+ audio info
+static dab_service_data_reply_header_t dab_service_data_reply_header;	//struct that contains data in dab service data reply header
+static dab_ensemble_t ensembles_list[10];								//list of ensembles found during full scan
+static dab_service_t services_list[100];								//list of services found during full scan
 
-static dab_ensemble_t ensembles_list[10];					//list of ensembles found during full scan
-static dab_service_t services_list[100];					//list of services found during full scan
+static dab_management_t dab_management;									//struct that contains some DAB management data
 
-static dab_management_t dab_management;					//struct that contains some DAB management data
+static uint8_t dls_label[129] = "";
+
+static uint8_t slideshow_data[8500];
 
 
 void Si468x_dab_init()
@@ -55,17 +59,17 @@ void Si468x_dab_init()
 	Si468x_reset();
 	Si468x_power_up();
 	Si468x_bootloader_load_host();
-	Si468x_firmware_load_flash(IMAGE_DAB_4_0_5_START_ADDR);
+	Si468x_firmware_load_flash(IMAGE_DAB_6_0_9_START_ADDR);
 	Si468x_boot();
 	Si468x_get_part_info();
 	Si468x_get_sys_state();
 	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_CFG, 0x01); 						//włączanie lub wyłącznie switcha front-end, prawdopodobnie dla dab dać 0x00, dla FM 0x01
-	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARM, 0xF8A9); 						//dla DAB 0xF8A9 lub 0xF784, sprawdzic jak lepiej dziala. Dla FM 0xEDB5.
-	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARB, 0x01C6); 						//dla DAB 0x01C6 lub 0x01D8, sprawdzic jak lepiej dziala. Dla FM 0x01E3.
+	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARM, 0xF8a9); 						//dla DAB 0xF8A9 lub 0xF784, sprawdzic jak lepiej dziala. Dla FM 0xEDB5.
+	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARB, 0x01c6); 						//dla DAB 0x01C6 lub 0x01D8, sprawdzic jak lepiej dziala. Dla FM 0x01E3.
 	Si468x_set_property(SI468x_PROP_DAB_VALID_RSSI_THRESHOLD, 0x7); 				//prog RSSI od kiedy łapie kanał, default 12
 	Si468x_set_property(SI468x_PROP_DAB_VALID_RSSI_TIME, 0x30); 					//czas po ktorym na podstawie RSSI jest określany Valid, od 0 do 63 ms, default 30 = 0x1e
 	Si468x_set_property(SI468x_PROP_DAB_VALID_ACQ_TIME, 0xBB8); 					//czas jaki się czeka na osiągnięcie ACQ, jak nie osiagnie to uznaje ze nie ma sygnalu, od 0 do 4095 ms, default 2000 = 0x7D0
-	Si468x_set_property(SI468x_PROP_DAB_XPAD_ENABLE, 0x4005); 						//określa które featury PAD będą przesyłane do hosta
+	Si468x_set_property(SI468x_PROP_DAB_XPAD_ENABLE, 0x4005); 						//określa które featury PAD będą przesyłane do hosta. bylo 0x4005
 	Si468x_set_property(SI468x_PROP_DAB_EVENT_MIN_SVRLIST_PERIOD, 0x01); 			//określa co ile będzie aktualizowana lista usług, x100 ms. Bylo 6, testowo 1, zeby lepiej czytac nazwy
 	Si468x_set_property(SI468x_PROP_DAB_EVENT_MIN_SVRLIST_PERIOD_RECONFIG, 0x01); 	//określa co ile będzie aktualizowana lista usług w trakcie rekonfiguracji, x100 ms
 	Si468x_set_property(SI468x_PROP_DAB_ACF_ENABLE, 0x01);							//tylko soft mute włączone przy slabym sygnale
@@ -288,11 +292,6 @@ RETURN_CODE Si468x_read_reply(uint16_t length, uint8_t *buffer)
 //	rd_reply = *((rd_reply_t*)dab_spi_rx_buffer);
 	memcpy((uint8_t*)&rd_reply, (uint8_t*)dab_spi_rx_buffer, sizeof(rd_reply_t));
 	return SUCCESS;
-}
-
-uint8_t get_rx_buffer(int buffer_pos)
-{
-	return dab_spi_rx_buffer[buffer_pos];
 }
 
 void Si468x_get_sys_state()
@@ -1037,6 +1036,210 @@ void Si468x_dab_get_component_info(uint32_t service_id, uint8_t component_id)
 
 }
 
+void Si468x_dab_get_digital_service_data()
+{
+	status = Si468x_read_reply(5, dab_spi_rx_buffer);
+
+	if(rd_reply.d_srv_int)
+	{
+		dab_spi_tx_buffer[0] = SI468X_CMD_GET_DIGITAL_SERVICE_DATA;
+		dab_spi_tx_buffer[1] = 0x01;	//+1 = ACK, +16 = STATUS_ONLY
+
+		status = Si468x_write_command(2, dab_spi_tx_buffer);
+		HAL_Delay(5);
+
+		//first read only header to obtain payload data size
+		status = Si468x_read_reply(30, dab_spi_rx_buffer);
+		memcpy((uint8_t*)&dab_service_data_reply_header, (uint8_t*)&dab_spi_rx_buffer[4], sizeof(dab_service_data_reply_header));
+
+
+//		if(dab_service_data_reply_header.buff_count)
+		{
+			send_debug_msg("-----------Getting DAB Service Data-------------", CRLF_SEND);
+
+//			send_debug_msg("DSRV PCKT INT: ", CRLF_NO_SEND);
+//			send_debug_msg(itoa(dab_service_data_reply_header.dsrv_pckt_int, itoa_buffer, 10), CRLF_SEND);
+//
+//			send_debug_msg("DSRV OVFL INT: ", CRLF_NO_SEND);
+//			send_debug_msg(itoa(dab_service_data_reply_header.dsrv_ovfl_int, itoa_buffer, 10), CRLF_SEND);
+//
+//			send_debug_msg("Buffer count: ", CRLF_NO_SEND);
+//			send_debug_msg(itoa(dab_service_data_reply_header.buff_count, itoa_buffer, 10), CRLF_SEND);
+//
+//			send_debug_msg("SRV STATE: ", CRLF_NO_SEND);
+//			switch(dab_service_data_reply_header.srv_state)
+//			{
+//				case 0:
+//					send_debug_msg("PLAYING", CRLF_SEND);
+//					break;
+//				case 1:
+//					send_debug_msg("STOPPED", CRLF_SEND);
+//					break;
+//				case 2:
+//					send_debug_msg("OVERFLOW", CRLF_SEND);
+//					break;
+//				case 3:
+//					send_debug_msg("NEW OBJECT", CRLF_SEND);
+//					break;
+//				case 4:
+//					send_debug_msg("PACKET ERRORS", CRLF_SEND);
+//					break;
+//				default:
+//					send_debug_msg("Unknown", CRLF_SEND);
+//					break;
+//			}
+//
+//			send_debug_msg("DATA SRC: ", CRLF_NO_SEND);
+//			switch(dab_service_data_reply_header.data_src)
+//			{
+//				case 0:
+//					send_debug_msg("DATA SERVICE", CRLF_SEND);
+//					break;
+//				case 1:
+//					send_debug_msg("PAD DATA", CRLF_SEND);
+//					break;
+//				case 2:
+//					send_debug_msg("PAD DLS", CRLF_SEND);
+//					break;
+//				default:
+//					send_debug_msg("Unknown", CRLF_SEND);
+//					break;
+//			}
+//
+//			send_debug_msg("DSC TY: ", CRLF_NO_SEND);
+//			switch(dab_service_data_reply_header.dsc_ty)
+//			{
+//				case 0:
+//					send_debug_msg("Unspecified", CRLF_SEND);
+//					break;
+//				case 1:
+//					send_debug_msg("TMC", CRLF_SEND);
+//					break;
+//				case 5:
+//					send_debug_msg("TMC/TPEG", CRLF_SEND);
+//					break;
+//				case 60:
+//					send_debug_msg("MOT", CRLF_SEND);
+//					break;
+//				default:
+//					send_debug_msg("Unknown", CRLF_SEND);
+//					break;
+//			}
+//
+//			send_debug_msg("BYTE COUNT: ", CRLF_NO_SEND);
+//			send_debug_msg(itoa(dab_service_data_reply_header.byte_count, itoa_buffer, 10), CRLF_SEND);
+//			send_debug_msg("UA TYPE: ", CRLF_NO_SEND);
+//			send_debug_msg(itoa(dab_service_data_reply_header.ua_type, itoa_buffer, 10), CRLF_SEND);
+//
+//			send_debug_msg("SEGMENT NUM: ", CRLF_NO_SEND);
+//			send_debug_msg(itoa(dab_service_data_reply_header.seg_num, itoa_buffer, 10), CRLF_SEND);
+//			send_debug_msg("NUMBER OF SEGS: ", CRLF_NO_SEND);
+//			send_debug_msg(itoa(dab_service_data_reply_header.num_segs, itoa_buffer, 10), CRLF_SEND);
+
+
+			//second read full data when we know data length
+
+			if(!dab_service_data_reply_header.dsrv_ovfl_int)
+			{
+				status = Si468x_read_reply(24 + dab_service_data_reply_header.byte_count, dab_spi_rx_buffer);
+
+				if(dab_service_data_reply_header.dsc_ty == 60)
+				{
+					send_debug_msg("Slideshow Data: ", CRLF_SEND);
+
+					for(uint16_t i = 0; i < 4096; i++)
+					{
+						slideshow_data[i] = 0;
+					}
+
+					for(uint16_t i = 0; i < dab_service_data_reply_header.byte_count; i++)
+					{
+						slideshow_data[i] = dab_spi_rx_buffer[24 + i];
+					}
+
+					for(uint16_t i = 0; i < dab_service_data_reply_header.byte_count; i++)
+					{
+//						send_debug_data(slideshow_data[i]);
+//						send_debug_msg(itoa(slideshow_data[i], itoa_buffer, 10), CRLF_SEND);
+					}
+//					send_debug_msg("", CRLF_SEND);
+//					send_debug_msg("end", CRLF_SEND);
+				}
+
+				if(dab_service_data_reply_header.data_src == 2)
+				{
+					send_debug_msg("Dynamic Label Data: ", CRLF_SEND);
+
+					for(uint8_t i = 0; i < 128; i++)
+					{
+						dls_label[i] = 0;
+					}
+
+					uint8_t label_pos = 0;
+					for(uint8_t i = 0; i < dab_service_data_reply_header.byte_count; i++)
+					{
+						dls_label[label_pos] = dab_spi_rx_buffer[24 + 2 + i];
+						send_debug_msg(itoa(dab_spi_rx_buffer[24 + 2 + i], itoa_buffer, 10), CRLF_SEND);
+
+						//polish symbols convert
+						//ó
+						if(dls_label[label_pos] == 195)
+						{
+							dls_label[label_pos] = 111;//lub 243
+							i++;
+						}
+						//ą
+						if(dls_label[label_pos] == 177)
+						{
+
+						}
+						//ę
+						if(dls_label[label_pos] == 234)
+						{
+
+						}
+						//ć to c
+						if(dls_label[label_pos] == 196)
+						{
+							dls_label[label_pos] = 99; //lub 230
+							i++;
+						}
+						//ż
+						if(dls_label[label_pos] == 191)
+						{
+
+						}
+						//ź
+						if(dls_label[label_pos] == 188)
+						{
+
+						}
+						//ś
+						if(dls_label[label_pos] == 182)
+						{
+
+						}
+						//ł to l
+						if(dls_label[label_pos] == 197)
+						{
+							dls_label[label_pos] = 108; //lub 179
+							i++;
+						}
+						//ń
+						if(dls_label[label_pos] == 243)
+						{
+
+						}
+
+						label_pos++;
+					}
+					send_debug_msg(dls_label, CRLF_SEND);
+				}
+			}
+		}
+	}
+}
+
 
 void Si468x_dab_test_get_ber_info()	//póki co odczyt BER nie działa
 {
@@ -1119,6 +1322,8 @@ void play_station(uint8_t station_id)
 	Si468x_dab_start_digital_service(services_list[dab_management.actual_station].service_id, services_list[dab_management.actual_station].components[0].subchannel_id);
 	Si468x_dab_digrad_status();
 	Si468x_dab_get_audio_info();
+
+	Si468x_set_property(SI468x_PROP_DIGITAL_SERVICE_INT_SOURCE, 0x03);	//enable both service interrupts
 }
 
 void restore_from_eeprom()
@@ -1320,4 +1525,9 @@ dab_ensemble_t* get_dab_ensemble_list()
 dab_management_t get_dab_management()
 {
 	return dab_management;
+}
+
+char* get_dls_label()
+{
+	return dls_label;
 }

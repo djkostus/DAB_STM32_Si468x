@@ -9,7 +9,7 @@
 #define INC_SI468X_H_
 
 #define SPI_TX_BUFFER_SIZE 4096
-#define SPI_RX_BUFFER_SIZE 2048
+#define SPI_RX_BUFFER_SIZE 9000
 
 #define RESET_PIN_HIGH HAL_GPIO_WritePin(DAB_GPIO_RESET_GPIO_Port, DAB_GPIO_RESET_Pin, 1)
 #define RESET_PIN_LOW HAL_GPIO_WritePin(DAB_GPIO_RESET_GPIO_Port, DAB_GPIO_RESET_Pin, 0)
@@ -25,7 +25,7 @@
 #define COMMAND_ERROR	0x20
 #define UNSUPPORTED_FUNCTION	0x80
 
-#define POLL_TIMEOUT_MS 1000
+#define POLL_TIMEOUT_MS 300
 
 #define TUNE_TIMEOUT_MS 3000
 
@@ -251,6 +251,55 @@ typedef struct{
 
 }dab_audio_info_t;
 
+typedef struct{
+	//reply byte 4 INTSRC
+	uint8_t dsrv_pckt_int			: 1;	//Data for an enabled data service is ready for transfer to the host.
+	uint8_t dsrv_ovfl_int			: 1;	//The data services system has overflowed. This indicates that the host processor is not reading the services data out of the device fast enough. At most 20 outstanding data blocks can be queued in the device, and the total size of the data blocks cannot exceed 16KB
+	uint8_t 						: 6;	//ignore
+
+	//reply byte 5 BUFF_COUNT
+	uint8_t buff_count				: 8;	//Indicates the remaining number of buffers in the data service buffer queue.
+
+	//reply byte 6 SRV_STATE
+	uint8_t srv_state 				: 8;	//The status indicator for the associated service component.
+											//PLAYING	0x0	Indicates that the service is playing out normally
+											//STOPPED	0x1	Indicates that the data service has stopped and that this is the last data block associated with the service
+											//OVERFLOW	0x2	Indicates that the system was not able to forward a packet due to a memory overflow. If this status is present the host is not reading the packet data fast enough
+											//NEW_OBJECT	0x3	Indicates the this data packet represents the beginning of a new data object
+											//PACKET_ERRORS	0x4	Indicates the this data packet was received with errors
+
+	//reply byte 7 DATA TYPE
+	uint8_t dsc_ty					: 6;	//Used for DAB only. Returns 0 or the DSCTy depending on the DATA_SRC field. See DATA_SRC for details.
+											//TYPE = 0: unspecified data
+											//TYPE = 1: TMC
+											//TYPE = 5: TDC/TPEG
+											//TYPE =60: MOT
+
+	uint8_t data_src				: 2;	//For DAB indicates the payload source. Not used in HD modes of operation
+											//DATA_SERVICE	0x0	Indicates that the payload is from a standard data service and DATA_TYPE is DSCTy
+											//PAD_DATA	0x1	Indicates that the payload is non-DLS PAD and DATA_TYPE is DSCTy
+											//PAD_DLS	0x2	Indicates that the payload is DLS PAD and DATA_TYPE is 0
+
+	//reply byte 8, 9, 10, 11 SERVICE_ID
+	uint32_t service_id				: 32;	//The Service ID this data is associated wit
+
+	//reply byte 12, 13, 14, 15 COMPONENT_ID
+	uint32_t component_id			: 32;	//The Component ID or Port Number this data is associated with
+
+	//reply byte 16, 17 UA_TYPE
+	uint16_t ua_type				: 16;	//User application type. Set property [ref DAB_XPAD_ENABLE] to enable user application types
+
+	//reply byte 18, 19 BYTE_COUNT
+	uint16_t byte_count				: 16;	//The length of this data block in bytes excluding the DSRV header. The maximum length can be 8215 bytes in DAB mode
+
+	//reply byte 20, 21 SEG_NUM
+	uint16_t seg_num 				: 16;	//The segment number for this data block. If the data is associated with a stream this value represents a sequence number. Note that segment numbers can be returned out of order. Therefore the host must store and reassemble the data as needed
+
+	//reply byte 22, 23 NUM_SEGS
+	uint16_t num_segs				: 16;	//The total number of segments to be returned for this data object. If NUM_SEGS=0 then no object length information is known or the associated service is a stream
+
+}dab_service_data_reply_header_t;
+
 
 void Si468x_dab_init();
 void Si468x_reset();
@@ -273,8 +322,6 @@ void Si468x_read_multiple(uint16_t len, uint8_t* read_buffer);
 RETURN_CODE Si468x_write_command (uint16_t length, uint8_t *buffer);
 RETURN_CODE Si468x_read_reply(uint16_t length, uint8_t *buffer);
 
-uint8_t get_rx_buffer(int buffer_pos);
-
 void Si468x_get_sys_state();
 void Si468x_get_part_info();
 
@@ -293,6 +340,8 @@ dab_audio_info_t Si468x_dab_get_audio_info();
 void Si468x_dab_get_event_status();
 void Si468x_dab_get_component_info(uint32_t service_id, uint8_t component_id);
 
+void Si468x_dab_get_digital_service_data();
+
 void Si468x_dab_test_get_ber_info();
 
 void Si468x_dab_get_time();
@@ -309,6 +358,8 @@ dab_management_t get_dab_management();
 dab_service_t* get_dab_service_list();
 
 dab_ensemble_t* get_dab_ensemble_list();
+
+char* get_dls_label();
 
 
 #endif /* INC_SI468X_H_ */

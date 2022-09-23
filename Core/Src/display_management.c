@@ -14,7 +14,7 @@ static char itoa_buffer[64];
 
 static uint8_t display_freeze = 0;
 
-uint8_t last_dls[128];
+uint8_t last_dls[129];
 
 void Display_clear_screen()
 {
@@ -134,7 +134,7 @@ void Display_main_screen_dls(uint8_t* _dls_label)
 		ILI9341_Draw_String(8, 48, WHITE, DARKGREY, "                                                                                                                               ", 2);
 		//show new label on the screen
 		ILI9341_Draw_String(8, 48, WHITE, DARKGREY, _dls_label, 2);
-		for(uint8_t i = 0; i < 128; i++)
+		for(uint8_t i = 0; i < 129; i++)
 		{
 			last_dls[i] = _dls_label[i];
 		}

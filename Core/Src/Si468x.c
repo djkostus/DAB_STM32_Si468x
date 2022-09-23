@@ -1147,6 +1147,19 @@ void Si468x_dab_get_digital_service_data()
 				{
 					send_debug_msg("Slideshow Data: ", CRLF_SEND);
 
+					uint32_t body_size;
+					uint16_t header_size;
+					uint8_t content_type;
+					uint16_t content_sub_type;
+
+					body_size = (dab_spi_rx_buffer[24 + 0] << 20) + (dab_spi_rx_buffer[24 + 1] << 12) + (dab_spi_rx_buffer[24 + 2] << 4) + ((dab_spi_rx_buffer[24 + 3] && 0xF0) >> 4);
+
+					header_size = ((dab_spi_rx_buffer[24 + 3] && 0x0F) << 9) + (dab_spi_rx_buffer[24 + 4] << 1) + ((dab_spi_rx_buffer[24 + 5] && 0x80) >> 7);
+
+					content_type = (dab_spi_rx_buffer[24 + 5] && 0x7E) >> 1;
+
+					content_sub_type = ((dab_spi_rx_buffer[24 + 5] && 0x01) << 8) + (dab_spi_rx_buffer[24 + 6]);
+
 					for(uint16_t i = 0; i < 4096; i++)
 					{
 						slideshow_data[i] = 0;
@@ -1159,11 +1172,20 @@ void Si468x_dab_get_digital_service_data()
 
 					for(uint16_t i = 0; i < dab_service_data_reply_header.byte_count; i++)
 					{
-//						send_debug_data(slideshow_data[i]);
-//						send_debug_msg(itoa(slideshow_data[i], itoa_buffer, 10), CRLF_SEND);
+//						send_debug_msg(slideshow_data[i]);
+						send_debug_msg(itoa(slideshow_data[i], itoa_buffer, 10), CRLF_SEND);
 					}
 //					send_debug_msg("", CRLF_SEND);
-//					send_debug_msg("end", CRLF_SEND);
+					send_debug_msg("end", CRLF_SEND);
+					send_debug_msg("Body Size: ", CRLF_NO_SEND);
+					send_debug_msg(itoa(body_size, itoa_buffer, 10), CRLF_SEND);
+					send_debug_msg("Header Size: ", CRLF_NO_SEND);
+					send_debug_msg(itoa(header_size, itoa_buffer, 10), CRLF_SEND);
+					send_debug_msg("Content Type: ", CRLF_NO_SEND);
+					send_debug_msg(itoa(content_type, itoa_buffer, 10), CRLF_SEND);
+					send_debug_msg("Content SubType: ", CRLF_NO_SEND);
+					send_debug_msg(itoa(content_sub_type, itoa_buffer, 10), CRLF_SEND);
+
 				}
 
 				if(dab_service_data_reply_header.data_src == 2)
@@ -1179,7 +1201,7 @@ void Si468x_dab_get_digital_service_data()
 					for(uint8_t i = 0; i < dab_service_data_reply_header.byte_count; i++)
 					{
 						dls_label[label_pos] = dab_spi_rx_buffer[24 + 2 + i];
-						send_debug_msg(itoa(dab_spi_rx_buffer[24 + 2 + i], itoa_buffer, 10), CRLF_SEND);
+//						send_debug_msg(itoa(dab_spi_rx_buffer[24 + 2 + i], itoa_buffer, 10), CRLF_SEND);
 
 						//polish symbols convert
 						//ó

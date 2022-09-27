@@ -400,3 +400,4 @@ uint8_t get_scan_cancel_flag()
 	return scan_cancel_flag;
 }
 
+

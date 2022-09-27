@@ -33,6 +33,9 @@
 #define IMAGE_DAB_4_0_5_START_ADDR 0x106000
 #define IMAGE_FM_4_0_12_START_ADDR 0x86000
 
+#define USE_ANT_CAP 1
+#define NOT_USE_ANT_CAP 0
+
 //Default DAB Channels
 
 //#define CH_5A 0   // 174928 kHz
@@ -329,7 +332,7 @@ void Si468x_set_property(uint16_t property_id, uint16_t property_value);
 uint16_t Si468x_get_property(uint16_t property_id);
 
 void Si468x_dab_get_freq_list();
-void Si468x_dab_tune_freq(uint8_t channel, uint16_t antcap);
+void Si468x_dab_tune_freq(uint8_t channel, uint16_t ant_cap);
 void Si468x_dab_reset_interrupts();
 dab_digrad_status_t Si468x_dab_digrad_status();
 void Si468x_dab_get_digital_service_list();
@@ -348,6 +351,8 @@ void Si468x_dab_get_time();
 
 void Si468x_set_audio_volume(uint8_t _volume);
 
+uint16_t Si468x_test_get_rssi();
+
 void play_station(uint8_t station_id);
 
 void restore_from_eeprom();
@@ -360,6 +365,8 @@ dab_service_t* get_dab_service_list();
 dab_ensemble_t* get_dab_ensemble_list();
 
 char* get_dls_label();
+
+void calibration(uint8_t channel);
 
 
 #endif /* INC_SI468X_H_ */

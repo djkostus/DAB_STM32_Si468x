@@ -6,11 +6,11 @@
 #ifndef INC_DAB_DEFS_H_
 #define INC_DAB_DEFS_H_
 
-enum dab_channels_list{
+const enum dab_channels_list{
 CH_5A,   // 174928 kHz
 CH_5B,   // 176640 kHz
 CH_5C,   // 178352 kHz
-CH_5D,   // 180064 kHz
+CH_5D,   // 180064 kH0
 CH_6A,   // 181936 kHz
 CH_6B,   // 183648 kHz
 CH_6C,   // 185360 kHz
@@ -49,6 +49,7 @@ CH_13D,   // 235776 kHz
 CH_13E,   // 237488 kHz
 CH_13F   // 239200 kHz
 };
+
 static const char* dab_channels_names[] = {
 "5A",   // 174928 kHz
 "5B",   // 176640 kHz
@@ -91,6 +92,50 @@ static const char* dab_channels_names[] = {
 "13D",   // 235776 kHz
 "13E",   // 237488 kHz
 "13F"   // 239200 kHz
+};
+
+static const uint16_t ant_cap_values[] = {
+74,	//0
+70,	//1
+62,	//2
+57,	//3
+58,	//4
+47,	//5
+42,	//6
+42,	//7
+41,	//8
+27,	//9
+22,	//10
+19,	//11
+11,	//12
+4,	//13
+3,	//14
+4,	//15
+2,	//16
+1,	//17
+6,	//18
+12,	//19
+5,	//20
+0,	//21
+15,	//22
+15,	//23
+33,	//24
+36,	//25
+0,	//26
+71,	//27
+75,	//28
+91,	//29
+103,//30
+0,	//31
+90,	//32
+96,	//33
+93,	//34
+95,	//35
+97,	//36
+88,	//37
+88,	//38
+89,	//39
+97	//40
 };
 
 #endif /* INC_DAB_DEFS_H_ */

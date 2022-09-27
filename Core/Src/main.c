@@ -27,12 +27,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "si468x.h"
+#include "Si468x.h"
 #include "debug_uart.h"
 #include "touch.h"
 #include "state_machine.h"
 #include "eeprom.h"
 #include "ILI9341_Driver.h"
+#include "dab_defs.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -112,8 +113,6 @@ int main(void)
   ILI9341_Init();
 
   Display_booting_screen();
-
-
   Si468x_dab_init();
   restore_from_eeprom();
 

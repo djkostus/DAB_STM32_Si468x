@@ -52,6 +52,8 @@ static uint8_t dls_label[129] = "";
 
 static uint8_t slideshow_data[8500];
 
+static uint16_t rssi_hi_res;
+
 
 void Si468x_dab_init()
 {
@@ -63,10 +65,10 @@ void Si468x_dab_init()
 	Si468x_boot();
 	Si468x_get_part_info();
 	Si468x_get_sys_state();
-	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_CFG, 0x01); 						//włączanie lub wyłącznie switcha front-end, prawdopodobnie dla dab dać 0x00, dla FM 0x01
-	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARM, 0xF8a9); 						//dla DAB 0xF8A9 lub 0xF784, sprawdzic jak lepiej dziala. Dla FM 0xEDB5.
-	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARB, 0x01c6); 						//dla DAB 0x01C6 lub 0x01D8, sprawdzic jak lepiej dziala. Dla FM 0x01E3.
-	Si468x_set_property(SI468x_PROP_DAB_VALID_RSSI_THRESHOLD, 0x7); 				//prog RSSI od kiedy łapie kanał, default 12
+	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_CFG, 0x01); 						//włączanie lub wyłącznie switcha front-end, dla FM dać 0x00 (otwarty), dla DAB 0x01 (zamkniety)
+//	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARM, 0xF468); 						//dla DAB 0xF8A9 lub 0xF784, sprawdzic jak lepiej dziala. Dla FM 0xEDB5. Wartość z kalibracji DAB: 0xF468 (-2968)
+//	Si468x_set_property(SI468x_PROP_DAB_TUNE_FE_VARB, 0x250); 						//dla DAB 0x01C6 lub 0x01D8, sprawdzic jak lepiej dziala. Dla FM 0x01E3. Wartość z kalibracji DAB: 0x0250 (592)
+	Si468x_set_property(SI468x_PROP_DAB_VALID_RSSI_THRESHOLD, 0x5); 				//prog RSSI od kiedy łapie kanał, default 12
 	Si468x_set_property(SI468x_PROP_DAB_VALID_RSSI_TIME, 0x30); 					//czas po ktorym na podstawie RSSI jest określany Valid, od 0 do 63 ms, default 30 = 0x1e
 	Si468x_set_property(SI468x_PROP_DAB_VALID_ACQ_TIME, 0xBB8); 					//czas jaki się czeka na osiągnięcie ACQ, jak nie osiagnie to uznaje ze nie ma sygnalu, od 0 do 4095 ms, default 2000 = 0x7D0
 	Si468x_set_property(SI468x_PROP_DAB_XPAD_ENABLE, 0x4005); 						//określa które featury PAD będą przesyłane do hosta. bylo 0x4005
@@ -464,7 +466,7 @@ void Si468x_dab_get_freq_list()
 	}
 }
 
-void Si468x_dab_tune_freq(uint8_t channel, uint16_t antcap)
+void Si468x_dab_tune_freq(uint8_t channel, uint16_t ant_cap)
 {
 	send_debug_msg("-------------DAB Tune to selected frequency--------------", CRLF_SEND);
 	send_debug_msg("Frequency: ", CRLF_NO_SEND);
@@ -475,8 +477,25 @@ void Si468x_dab_tune_freq(uint8_t channel, uint16_t antcap)
 	dab_spi_tx_buffer[1] = 0x00;						//padding - as in documentation
 	dab_spi_tx_buffer[2] = channel;						//channel ID from table
 	dab_spi_tx_buffer[3] = 0x00;						//padding - as in documentation
-	dab_spi_tx_buffer[4] = antcap & 0xFF;				//antcap [7:0]
-	dab_spi_tx_buffer[5] = antcap >> 8;					//antcap [15:8]
+
+	switch(ant_cap)
+	{
+		case USE_ANT_CAP:
+			//use ANT_CAP value from table of best ANTCAP values
+			dab_spi_tx_buffer[4] = ant_cap_values[channel] & 0xFF;	//antcap [7:0]
+			dab_spi_tx_buffer[5] = ant_cap_values[channel] >> 8;	//antcap [15:8]
+			break;
+		case NOT_USE_ANT_CAP:
+			//use algorithm of automatic setting ant_cap value based on tuning values written to Si4684
+			dab_spi_tx_buffer[4] = 0x00;	//antcap [7:0]
+			dab_spi_tx_buffer[5] = 0x00;	//antcap [15:8]
+			break;
+		default:
+			//use ant_cap value as argument of this function
+			dab_spi_tx_buffer[4] = ant_cap & 0xFF;	//antcap [7:0]
+			dab_spi_tx_buffer[5] = ant_cap >> 8;	//antcap [15:8]
+			break;
+	}
 
 	status = Si468x_write_command(6, dab_spi_tx_buffer);
 	status = Si468x_read_reply(1, dab_spi_rx_buffer);
@@ -775,7 +794,7 @@ uint8_t Si468x_dab_full_scan()
 		valid_timeout = VALID_TIMEOUT;
 		fic_q_timeout = FIC_Q_TIMEOUT;
 
-		Si468x_dab_tune_freq(freq_index, 0);
+		Si468x_dab_tune_freq(freq_index, USE_ANT_CAP);
 
 		do
 		{
@@ -1327,6 +1346,25 @@ void Si468x_set_audio_volume(uint8_t _volume)
 	eeprom_write(LAST_VOLUME_ADDR, &_volume, sizeof(_volume));
 }
 
+uint16_t Si468x_test_get_rssi()
+{
+
+	dab_spi_tx_buffer[0] = SI468X_CMD_TEST_GET_RSSI;
+	dab_spi_tx_buffer[1] = 0x00; 	//always 0 - as in documentation
+
+	status = Si468x_write_command(2, dab_spi_tx_buffer);
+	HAL_Delay(1);
+	status = Si468x_read_reply(6, dab_spi_rx_buffer);
+
+	rssi_hi_res = dab_spi_rx_buffer[4] + (dab_spi_rx_buffer[5] << 8);
+	send_debug_msg("RSSI Hi Res: ", CRLF_NO_SEND);
+	send_debug_msg(itoa(rssi_hi_res, itoa_buffer, 10), CRLF_SEND);
+
+	return rssi_hi_res;
+}
+
+
+
 void play_station(uint8_t station_id)
 {
 	dab_management.actual_station = station_id;
@@ -1339,7 +1377,7 @@ void play_station(uint8_t station_id)
 	send_debug_msg(itoa(dab_management.actual_station + 1, itoa_buffer, 10), CRLF_SEND);
 	send_debug_msg("Name: ", CRLF_NO_SEND);
 	send_debug_msg(services_list[dab_management.actual_station].name, CRLF_SEND);
-	Si468x_dab_tune_freq(services_list[dab_management.actual_station].freq_id, 0); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
+	Si468x_dab_tune_freq(services_list[dab_management.actual_station].freq_id, USE_ANT_CAP); //CH_11B - PR Kraków, CH_9C - DABCOM Tarnów, CH_10D - PR Kielce,
 	Si468x_dab_get_component_info(services_list[dab_management.actual_station].service_id, services_list[dab_management.actual_station].components[0].subchannel_id);
 	Si468x_dab_start_digital_service(services_list[dab_management.actual_station].service_id, services_list[dab_management.actual_station].components[0].subchannel_id);
 	Si468x_dab_digrad_status();
@@ -1513,7 +1551,7 @@ void restore_from_eeprom()
 		Si468x_set_audio_volume(dab_management.audio_volume);
 
 		//play last played station
-		Si468x_dab_tune_freq(services_list[dab_management.last_station_index].freq_id, 0);
+		Si468x_dab_tune_freq(services_list[dab_management.last_station_index].freq_id, USE_ANT_CAP);
 		play_station(dab_management.last_station_index);
 
 	}
@@ -1552,4 +1590,43 @@ dab_management_t get_dab_management()
 char* get_dls_label()
 {
 	return dls_label;
+}
+
+void calibration(uint8_t channel)
+{
+	send_debug_msg("Performing calibration procedure. Channel: ", CRLF_NO_SEND);
+	send_debug_msg(itoa(channel, itoa_buffer, 10), CRLF_NO_SEND);
+	send_debug_msg(", ", CRLF_NO_SEND);
+	send_debug_msg(dab_channels_names[channel], CRLF_SEND);
+
+	uint32_t average_rssi = 0;
+
+	uint16_t best_rssi_val = 0;
+
+	uint8_t best_ant_cap = 0;
+
+	for(uint8_t ant_cap = 1; ant_cap <= 128; ant_cap++)
+	{
+		send_debug_msg("Actual ANT_CAP: ", CRLF_NO_SEND);
+		send_debug_msg(itoa(ant_cap, itoa_buffer, 10), CRLF_SEND);
+		average_rssi = 0;
+		Si468x_dab_tune_freq(channel, ant_cap);
+		HAL_Delay(60);
+		for(uint8_t i = 0; i < 5; i++)
+		{
+			average_rssi += Si468x_test_get_rssi();
+			HAL_Delay(30);
+		}
+		average_rssi /= 5;
+
+		if(average_rssi > best_rssi_val)
+		{
+			best_rssi_val = average_rssi;
+			best_ant_cap = ant_cap;
+		}
+	}
+	send_debug_msg("Best RSSI: ", CRLF_NO_SEND);
+	send_debug_msg(itoa(best_rssi_val, itoa_buffer, 10), CRLF_SEND);
+	send_debug_msg("Obtained with ANT_CAP val: ", CRLF_NO_SEND);
+	send_debug_msg(itoa(best_ant_cap, itoa_buffer, 10), CRLF_SEND);
 }

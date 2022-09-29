@@ -37,12 +37,4 @@ void Display_settings_screen_data(dab_management_t _dab_management);
 
 void Display_time(time_t time_val);
 
-void Display_show_station(dab_service_t _services_list[], uint8_t station, uint8_t _total_services);
-void Display_hide_station();
-void Display_show_empty_station();
-
-
-
-
-
 #endif /* INC_DISPLAY_H_ */

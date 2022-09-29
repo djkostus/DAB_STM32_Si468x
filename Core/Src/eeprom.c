@@ -14,22 +14,22 @@
 
 #define WRITE_TIMEOUT   20
 
-#define ADDR_SIZE 2	//dla 24c08 chodzi na 1, dla 24c256 na 2 bo wieksza pamiec i trzeba 2 bajty na adres
+#define ADDR_SIZE 2	//for 24c08 1, for 24c256 2, because of bigger memory size - we must habe 2 bytes for memory Address
 
-static uint32_t last_write;
+static uint32_t last_write;	//variable used to save time of last writing operation in eeprom_wait function
 
 void eeprom_wait(void)
 {
     while (HAL_GetTick() - last_write <= WRITE_TIMEOUT);
 }
 
-HAL_StatusTypeDef eeprom_read(uint32_t addr, void* data, uint32_t size) //max 64B naraz z uwagi na stronicowanie (dla AT24C256)
+HAL_StatusTypeDef eeprom_read(uint32_t addr, void* data, uint32_t size) //max 64B in one operation due to paging mechanism (for AT24C256)
 {
     eeprom_wait();
     return HAL_I2C_Mem_Read(&hi2c1, EEPROM_ADDR, addr, 2, data, size, 500);
 }
 
-HAL_StatusTypeDef eeprom_write(uint32_t addr, const void* data, uint32_t size) //max 64B naraz z uwagi na stronicowanie (dla AT24C256)
+HAL_StatusTypeDef eeprom_write(uint32_t addr, const void* data, uint32_t size) //max 64B in one operation due to paging mechanism (for AT24C256)
 {
     HAL_StatusTypeDef rc;
 

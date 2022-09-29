@@ -111,8 +111,8 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim11);
 
   ILI9341_Init();
-
   Display_booting_screen();
+
   Si468x_dab_init();
   restore_from_eeprom();
 

@@ -10,6 +10,7 @@
 
 #define PAGE_SIZE 64
 
+//maximum number of ensembles and services
 #define MAX_ENSEMBLES 10
 #define MAX_SERVICES 100
 
@@ -24,7 +25,6 @@
 //page 1...3 - 64...255 - frequency table
 #define FREQ_TABLE_START_ADDR 64
 
-
 //page 4 - 256...319 - various data connected with scanning
 #define SCAN_RELATED_DATA_PAGE 4
 
@@ -34,10 +34,8 @@
 #define TOTAL_SERVICES_ADDR 262
 #define LAST_STATION_INDEX_ADDR 263
 
-
 //page 5...14 - 320...959 - ensembles list
 #define ENSEMBLES_TABLE_START_ADDR 320
-
 
 //page 15...114 - 960...7359 - stations list
 #define SERVICES_TABLE_START_ADDR 960

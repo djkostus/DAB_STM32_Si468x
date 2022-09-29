@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include "main.h"
 
-/* Przyporzadkowanie zgodnie z main.h */
+/* GPIO management aliases */
 
 #define  RESET_OFF 		HAL_GPIO_WritePin(LCD_RST_GPIO_Port, LCD_RST_Pin, GPIO_PIN_SET)
 #define  RESET_ON 		HAL_GPIO_WritePin(LCD_RST_GPIO_Port, LCD_RST_Pin, GPIO_PIN_RESET)
@@ -26,7 +26,7 @@
 #define  DC_COMMAND 	HAL_GPIO_WritePin(LCD_DC_GPIO_Port, LCD_DC_Pin, GPIO_PIN_RESET)
 
 
-/* ------Definicja kolor�w------  */
+/* ------Defines of colours------  */
 
 #define BLACK       	0x0000
 #define NAVY        	0x000F
@@ -52,7 +52,7 @@
 #define BURST_MAX_SIZE 	500
 
 
-/* ------Funkcje do rysowania------  */
+/* ------Functions to draw items on the screen------  */
 
 void Show_Menu(void);
 void ILI9341_Init(void);

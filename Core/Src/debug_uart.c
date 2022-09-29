@@ -4,7 +4,7 @@
 #include <string.h>
 
 
-void send_debug_msg(char* msg, uint8_t is_crlf)//void send_debug_msg(char msg[], uint8_t is_crlf)
+void send_debug_msg(char* msg, uint8_t is_crlf)
 {
 	uint8_t msg_size = strlen(msg);
 	HAL_UART_Transmit(&huart3, (uint8_t*)msg, msg_size, 100);

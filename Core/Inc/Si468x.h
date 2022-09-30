@@ -8,15 +8,21 @@
 #ifndef INC_SI468X_H_
 #define INC_SI468X_H_
 
+//SPI Transmit buffer size
 #define SPI_TX_BUFFER_SIZE 4096
+
+//SPI Receive Buffer size
 #define SPI_RX_BUFFER_SIZE 9000
 
+//Reset Pin Aliases
 #define RESET_PIN_HIGH HAL_GPIO_WritePin(DAB_GPIO_RESET_GPIO_Port, DAB_GPIO_RESET_Pin, 1)
 #define RESET_PIN_LOW HAL_GPIO_WritePin(DAB_GPIO_RESET_GPIO_Port, DAB_GPIO_RESET_Pin, 0)
 
+//Chip Select Pin Aliases
 #define CS_PIN_LOW HAL_GPIO_WritePin(DAB_GPIO_CS_GPIO_Port, DAB_GPIO_CS_Pin, 0)
 #define CS_PIN_HIGH HAL_GPIO_WritePin(DAB_GPIO_CS_GPIO_Port, DAB_GPIO_CS_Pin, 1)
 
+//types of return status
 #define SUCCESS 0x00
 #define HAL_ERROR		0x01
 #define INVALID_INPUT	0x02
@@ -25,8 +31,10 @@
 #define COMMAND_ERROR	0x20
 #define UNSUPPORTED_FUNCTION	0x80
 
+//Timeout using in waiting for CTS function
 #define POLL_TIMEOUT_MS 300
 
+//Timeout using in tuning function
 #define TUNE_TIMEOUT_MS 3000
 
 #define IMAGE_DAB_6_0_9_START_ADDR 0x6000
@@ -80,13 +88,16 @@
 //#define CH_13E 39   // 237488 kHz
 //#define CH_13F 40   // 239200 kHz
 
+
 typedef uint8_t RETURN_CODE;
 
+//Struct that contains info about DAB service component
 typedef struct{
 	uint8_t subchannel_id;
 	uint8_t tm_id;
 }dab_component_t;
 
+//Struct that contains info about DAB service
 typedef struct{
 	uint8_t name[20];
 	uint8_t pd_flag;
@@ -100,6 +111,7 @@ typedef struct{
 	dab_component_t components[4];
 }dab_service_t;
 
+//Struct that contains data read after DAB_DIGRAD_STATUS command: a lot of informations about receiving signal
 typedef struct{
 	//dab_digrad_status byte 4: INTSRC
 	uint8_t rssi_l_int			: 1;	//Indicates RSSI below ref_prop DAB_DIGRAD_RSQ_RSSI_LOW_THRESHOLD
@@ -147,6 +159,7 @@ typedef struct{
 	uint32_t fic_err_cnt		: 32;	//Indicates the total number of error bits in FIC Pre-Viterbi pseudo BER measurement
 }dab_digrad_status_t;
 
+//Struct that contains info about ensemble
 typedef struct{
 	uint16_t id;
 	uint8_t label[20];
@@ -154,6 +167,7 @@ typedef struct{
 	uint8_t freq_id;
 }dab_ensemble_t;
 
+//Struct that contains data returned after RD_REPLY command (first 4 bytes)
 typedef struct{
 	//RD_REPLY byte 0
 	uint8_t stc_int			: 1;	// seek/tune complete interrupt
@@ -182,6 +196,7 @@ typedef struct{
 	uint8_t pwr_up_state	: 2;	//Indicates the powerup state of the system.
 }rd_reply_t;
 
+//Struct that contains info about DAB events/interrupts
 typedef struct{
 	//reply byte 4 - EVENT_INT
 	uint8_t srv_list_int	: 1;	//New service list interrupt. Indicates that a new digital service list is available. The new service list is retrieved with the GET_DIGITAL_SERVICE_LIST command.
@@ -210,6 +225,7 @@ typedef struct{
 	uint8_t 				: 4;	//ignore
 }dab_events_t;
 
+//Struct that contains info about time which is get by DAB_GET_TIME command
 typedef struct{
 	uint16_t year			: 16;
 	uint8_t month			: 8;
@@ -218,6 +234,7 @@ typedef struct{
 	uint8_t minute			: 8;
 	uint8_t second			: 8;
 }time_t;
+
 
 typedef struct{
 	uint8_t total_services;							//total quantity of services found during full scan

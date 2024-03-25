@@ -34,10 +34,10 @@
 ../Core/Src/Si468x.c:1339:6:Si468x_set_audio_volume	16	static
 ../Core/Src/Si468x.c:1349:10:Si468x_test_get_rssi	8	static
 ../Core/Src/Si468x.c:1368:6:play_station	56	static
-../Core/Src/Si468x.c:1389:6:restore_from_eeprom	32	static
-../Core/Src/Si468x.c:1570:21:get_digrad_status	24	static
-../Core/Src/Si468x.c:1575:16:get_dab_service_list	4	static
-../Core/Src/Si468x.c:1580:17:get_dab_ensemble_list	4	static
-../Core/Src/Si468x.c:1585:18:get_dab_management	16	static
-../Core/Src/Si468x.c:1590:7:get_dls_label	4	static
-../Core/Src/Si468x.c:1595:6:calibration	32	static
+../Core/Src/Si468x.c:1389:6:restore_from_eeprom	88	static
+../Core/Src/Si468x.c:1588:21:get_digrad_status	24	static
+../Core/Src/Si468x.c:1593:16:get_dab_service_list	4	static
+../Core/Src/Si468x.c:1598:17:get_dab_ensemble_list	4	static
+../Core/Src/Si468x.c:1603:18:get_dab_management	16	static
+../Core/Src/Si468x.c:1608:7:get_dls_label	4	static
+../Core/Src/Si468x.c:1613:6:calibration	32	static

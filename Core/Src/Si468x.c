@@ -78,7 +78,7 @@ void Si468x_dab_init()
 	Si468x_set_property(SI468x_PROP_DAB_ACF_MUTE_SIGLOSS_THRESHOLD, 0x05);			//próg wyciszania audio jak sygnal jest utracony, default 0x06
 	Si468x_set_property(SI468x_PROP_DAB_ACF_SOFTMUTE_BER_LIMITS, 0xE2C4); 			//limit BER kiedy soft mute zadziała. Defaultowo 0xE2A6
 	Si468x_set_property(SI468x_PROP_DIGITAL_SERVICE_INT_SOURCE, 0x01);				//Enables the DSRVPCKTINT interrupt of the GET_DIGITAL_SERVICE_DATA command
-//	Si468x_dab_get_freq_list(); 													//odczytujemy z ukladu liste czestotliwosci do tablicy
+	//Si468x_dab_get_freq_list(); 													//odczytujemy z ukladu liste czestotliwosci do tablicy
 	Si468x_get_sys_state(); //kontrolnie zeby sprawdzic czy demod dziala
 
 }
@@ -451,7 +451,7 @@ void Si468x_dab_get_freq_list()
 
 			eeprom_write(FREQ_TABLE_SIZE_ADDR, &dab_management.freq_cnt, sizeof(dab_management.freq_cnt));
 
-			for (uint8_t i = 0; i < 3; i++)
+			for (uint8_t i = 0; i < (192 / PAGE_SIZE); i++)
 			{
 				eeprom_write(FREQ_TABLE_START_ADDR + PAGE_SIZE * i, &freq_table[i * PAGE_SIZE / 4], PAGE_SIZE);
 			}
@@ -1391,8 +1391,9 @@ void restore_from_eeprom()
 	send_debug_msg("--------------Restore from EEPROM memory-------------------", CRLF_SEND);
 
 	//restore frequency table
+
 	eeprom_read(FREQ_TABLE_SIZE_ADDR, &dab_management.freq_cnt, sizeof(dab_management.freq_cnt));
-	for (uint8_t i = 0; i < 3; i++)
+	for (uint8_t i = 0; i < (192 / PAGE_SIZE); i++)
 	{
 		eeprom_read(FREQ_TABLE_START_ADDR + PAGE_SIZE * i, &freq_table[i * PAGE_SIZE / 4], PAGE_SIZE);
 		HAL_Delay(5);
@@ -1430,9 +1431,22 @@ void restore_from_eeprom()
 			eeprom_read(ENSEMBLES_TABLE_START_ADDR + PAGE_SIZE * i, &ensembles_list[i], sizeof(dab_ensemble_t));
 		}
 
-		for(uint8_t i = 0; i < dab_management.total_services; i++)
+		if(PAGE_SIZE == 64)
 		{
-			eeprom_read(SERVICES_TABLE_START_ADDR + PAGE_SIZE * i, &services_list[i], sizeof(dab_service_t));
+			for(uint8_t i = 0; i < dab_management.total_services; i++)
+			{
+				eeprom_read(SERVICES_TABLE_START_ADDR + PAGE_SIZE * i, &services_list[i], sizeof(dab_service_t));
+			}
+		}
+		if(PAGE_SIZE == 32)
+		{
+			for(uint8_t i = 0; i < dab_management.total_services; i++)
+			{
+				uint8_t temp [64];
+				eeprom_read(SERVICES_TABLE_START_ADDR + PAGE_SIZE * i * 2, &temp[0], 32);
+				eeprom_read(SERVICES_TABLE_START_ADDR + PAGE_SIZE * i * 2 + 32, &temp[32], sizeof(dab_service_t) - 32);
+				memcpy(&services_list[i], &temp, sizeof(dab_service_t));
+			}
 		}
 
 		//check if everything is ok
@@ -1546,10 +1560,6 @@ void restore_from_eeprom()
 		}
 		send_debug_msg("--------------------------------------------------------------------------------------------------------", CRLF_SEND);
 
-		//restore volume level
-		eeprom_read(LAST_VOLUME_ADDR, &dab_management.audio_volume, sizeof(dab_management.audio_volume));
-		Si468x_set_audio_volume(dab_management.audio_volume);
-
 		//play last played station
 		Si468x_dab_tune_freq(services_list[dab_management.last_station_index].freq_id, USE_ANT_CAP);
 		play_station(dab_management.last_station_index);
@@ -1564,6 +1574,14 @@ void restore_from_eeprom()
 		dab_management.total_services = 0;
 		dab_management.actual_station = 0;
 	}
+	//restore volume level
+	eeprom_read(LAST_VOLUME_ADDR, &dab_management.audio_volume, sizeof(dab_management.audio_volume));
+	if(dab_management.audio_volume > 63)
+	{
+		dab_management.audio_volume = 63;
+		eeprom_write(LAST_VOLUME_ADDR, &dab_management.audio_volume, sizeof(dab_management.audio_volume));
+	}
+	Si468x_set_audio_volume(dab_management.audio_volume);
 }
 
 

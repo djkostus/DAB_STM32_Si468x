@@ -1,6 +1,9 @@
-../Core/Src/eeprom.c:21:6:eeprom_wait	8	static
-../Core/Src/eeprom.c:26:19:eeprom_read	40	static
-../Core/Src/eeprom.c:32:19:eeprom_write	48	static
-../Core/Src/eeprom.c:43:6:eeprom_clear_scanning_data	80	static
-../Core/Src/eeprom.c:73:6:eeprom_save_scanning_data	32	static
-../Core/Src/eeprom.c:95:6:eeprom_show	168	static
+../Core/Src/eeprom.c:23:6:eeprom_wait	8	static
+../Core/Src/eeprom.c:28:19:eeprom_read	40	static
+../Core/Src/eeprom.c:34:19:eeprom_write	48	static
+../Core/Src/eeprom.c:45:6:eeprom_clear_scanning_data	48	static
+../Core/Src/eeprom.c:88:6:eeprom_save_scanning_data	96	static
+../Core/Src/eeprom.c:124:6:eeprom_show	440	static
+../Core/Src/eeprom.c:292:6:eeprom_erase	48	static
+../Core/Src/eeprom.c:316:6:eeprom_erase_2	80	static
+../Core/Src/eeprom.c:330:6:check_eeprom_erased	80	static

@@ -1,0 +1,16 @@
+../Core/Src/display_management.c:19:6:Display_clear_screen	1
+../Core/Src/display_management.c:25:6:Display_booting_screen	1
+../Core/Src/display_management.c:38:6:Display_main_screen_background	1
+../Core/Src/display_management.c:77:6:Display_main_screen_data	4
+../Core/Src/display_management.c:130:6:Display_main_screen_dls	3
+../Core/Src/display_management.c:147:6:Display_main_screen_empty	1
+../Core/Src/display_management.c:159:6:Display_stations_list_background	1
+../Core/Src/display_management.c:195:6:Display_stations_list_data	5
+../Core/Src/display_management.c:240:6:Display_scanning_screen_background	1
+../Core/Src/display_management.c:282:6:Display_scanning_screen_data	1
+../Core/Src/display_management.c:308:6:Display_scanning_screen_complete	1
+../Core/Src/display_management.c:319:6:Display_dab_digrad_status_background	1
+../Core/Src/display_management.c:379:6:Display_dab_digrad_status_data	45
+../Core/Src/display_management.c:494:6:Display_settings_screen_background	1
+../Core/Src/display_management.c:532:6:Display_settings_screen_data	1
+../Core/Src/display_management.c:542:6:Display_time	5

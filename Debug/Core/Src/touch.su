@@ -1,7 +1,7 @@
-../Core/Src/touch.c:31:21:Touch_read	16	static
-../Core/Src/touch.c:63:6:TP_Write_Byte	24	static
-../Core/Src/touch.c:116:10:TP_Read_AD	24	static
-../Core/Src/touch.c:157:10:TP_Read_XOY	16	static
-../Core/Src/touch.c:192:9:TP_Read_XY	24	static
-../Core/Src/touch.c:216:9:TP_Read_XY2	32	static
-../Core/Src/touch.c:287:9:TP_Scan	16	static
+../Core/Src/touch.c:33:21:Touch_read	16	static
+../Core/Src/touch.c:73:6:TP_Write_Byte	24	static
+../Core/Src/touch.c:126:10:TP_Read_AD	24	static
+../Core/Src/touch.c:167:10:TP_Read_XOY	16	static
+../Core/Src/touch.c:202:9:TP_Read_XY	24	static
+../Core/Src/touch.c:226:9:TP_Read_XY2	32	static
+../Core/Src/touch.c:297:9:TP_Scan	16	static

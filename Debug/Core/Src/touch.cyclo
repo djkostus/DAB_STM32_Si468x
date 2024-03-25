@@ -1,0 +1,7 @@
+../Core/Src/touch.c:33:21:Touch_read	2
+../Core/Src/touch.c:73:6:TP_Write_Byte	3
+../Core/Src/touch.c:126:10:TP_Read_AD	3
+../Core/Src/touch.c:167:10:TP_Read_XOY	1
+../Core/Src/touch.c:202:9:TP_Read_XY	1
+../Core/Src/touch.c:226:9:TP_Read_XY2	11
+../Core/Src/touch.c:297:9:TP_Scan	6

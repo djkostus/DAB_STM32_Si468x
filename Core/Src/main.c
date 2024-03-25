@@ -113,8 +113,18 @@ int main(void)
   ILI9341_Init();
   Display_booting_screen();
 
+  //check_eeprom_erased();
+  //HAL_Delay(5000);
+
+  //eeprom_erase();
+
+  //eeprom_show();
+
+  //HAL_Delay(50000);
+
   Si468x_dab_init();
   restore_from_eeprom();
+
 
   /* USER CODE END 2 */
 

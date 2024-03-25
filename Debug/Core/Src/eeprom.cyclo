@@ -1,0 +1,9 @@
+../Core/Src/eeprom.c:23:6:eeprom_wait	2
+../Core/Src/eeprom.c:28:19:eeprom_read	1
+../Core/Src/eeprom.c:34:19:eeprom_write	1
+../Core/Src/eeprom.c:45:6:eeprom_clear_scanning_data	4
+../Core/Src/eeprom.c:88:6:eeprom_save_scanning_data	3
+../Core/Src/eeprom.c:124:6:eeprom_show	14
+../Core/Src/eeprom.c:292:6:eeprom_erase	3
+../Core/Src/eeprom.c:316:6:eeprom_erase_2	2
+../Core/Src/eeprom.c:330:6:check_eeprom_erased	4

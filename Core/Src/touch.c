@@ -3,6 +3,8 @@
 #include "Si468x.h"
 #include "debug_uart.h"
 
+#define ROTATE 0 //0 if no, 1 if yes
+
 uint16_t POINT_COLOR = 0x0000, BACK_COLOR = 0xFFFF;
 
 _m_tp_dev tp_dev=
@@ -39,8 +41,16 @@ touch_coordinates_t Touch_read()
 		xtemp = TP_Read_XOY(0xD0);
 		ytemp = TP_Read_XOY(0x90);
 
-		touch_coordinates.x = 320 - 320 * (ytemp - 350) / (3900-350);
-		touch_coordinates.y = 240 - 230 * (xtemp - 240) / (3800-230);
+		if(ROTATE == 1)
+		{
+			touch_coordinates.x = 320 - 320 * (ytemp - 350) / (3900-350);
+			touch_coordinates.y = 240 - 230 * (xtemp - 240) / (3800-230);
+		}
+		else
+		{
+			touch_coordinates.x = 320 * (ytemp - 350) / (3900-350);
+			touch_coordinates.y = 230 * (xtemp - 240) / (3800-230);
+		}
 
 	}
 

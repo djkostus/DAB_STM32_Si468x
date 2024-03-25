@@ -1,6 +1,6 @@
 ################################################################################
 # Automatically-generated file. Do not edit!
-# Toolchain: GNU Tools for STM32 (10.3-2021.10)
+# Toolchain: GNU Tools for STM32 (11.3.rel1)
 ################################################################################
 
 -include ../makefile.init
@@ -60,8 +60,8 @@ all: main-build
 main-build: DAB_STM32_Si468x.elf secondary-outputs
 
 # Tool invocations
-DAB_STM32_Si468x.elf DAB_STM32_Si468x.map: $(OBJS) $(USER_OBJS) D:\PROJEKTY_SOFT\DAB_STM32_Si468x\STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "DAB_STM32_Si468x.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\PROJEKTY_SOFT\DAB_STM32_Si468x\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="DAB_STM32_Si468x.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+DAB_STM32_Si468x.elf DAB_STM32_Si468x.map: $(OBJS) $(USER_OBJS) C:\git\DAB_STM32_Si468x\STM32F407VGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "DAB_STM32_Si468x.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\git\DAB_STM32_Si468x\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="DAB_STM32_Si468x.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
